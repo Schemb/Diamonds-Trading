@@ -1,5 +1,5 @@
 from datamodel import Listing, OrderDepth, Trade, TradingState, Symbol, Product
-from firstRound_ver_1_0 import Trader
+from firstRound_ver_1_1 import Trader
 
 timestamp = 1000
 

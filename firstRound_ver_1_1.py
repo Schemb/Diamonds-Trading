@@ -23,10 +23,10 @@ class Trader:
     for product in state.order_depths:
         
       if product == "AMETHYSTS":
-        self.DoAmethystTrading(self, product, state)
+        self.DoAmethystTrading(self, product, state.order_depths[product])
 
       elif product == "STARFRUIT":
-        self.DoStarfruitTrading(self, product, state)
+        self.DoStarfruitTrading(self, product, state.order_depths[product])
 
     print("=--  Trading ended!  --=\n")
 
@@ -36,7 +36,7 @@ class Trader:
 
     return self.result, conversions, traderData
 
-  def DoAmethystTrading(self, product, state: TradingState):
+  def DoAmethystTrading(self, product, orderDepth: OrderDepth):
     print("=", product, "=")
 
     # A list of any orders made
@@ -45,15 +45,12 @@ class Trader:
     # The precalculated median of the amethyst price, used to determine when to buy/sell
     median = 10000
 
-    # Gets the buy and sell order depths for amethyst
-    order_depth: OrderDepth = state.order_depths[product]
-
     # Loops through all the sell orders
-    for sellOrder in order_depth.sell_orders:
+    for sellOrder in orderDepth.sell_orders:
       
       # Gets the price and size of the order
       askPrice = sellOrder
-      askAmount = order_depth.sell_orders[sellOrder]
+      askAmount = orderDepth.sell_orders[sellOrder]
       
       if int(askPrice) < median:  # If they are being sold less than the median
 
@@ -74,11 +71,11 @@ class Trader:
     print() # Prints a newline for formatting (only works in local testing)
 
     # Loops through all the buy orders
-    for buyOrder in order_depth.buy_orders:
+    for buyOrder in orderDepth.buy_orders:
 
       # Gets the asking price and the amount of the bid
       bidPrice = buyOrder
-      bidAmount = order_depth.buy_orders[buyOrder]
+      bidAmount = orderDepth.buy_orders[buyOrder]
 
       if int(bidPrice) > median: # If they are paying above the median
 
@@ -105,30 +102,27 @@ class Trader:
     print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
     print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
     
-  def DoStarfruitTrading(self, product, state: TradingState):
+  def DoStarfruitTrading(self, product, orderDepth: OrderDepth):
     print("=", product, "=")
 
     # A list of any orders made
     orders: List[Order] = []
 
-    # Gets the buy and sell order depths for starfruit
-    order_depth: OrderDepth = state.order_depths[product]
-
     # Loops through all the sell orders
-    for sellOrder in order_depth.sell_orders:
+    for sellOrder in orderDepth.sell_orders:
       
       # Gets the price and size of the order
       askPrice = sellOrder
-      askAmount = order_depth.sell_orders[sellOrder]
+      askAmount = orderDepth.sell_orders[sellOrder]
 
     # print() # Prints a newline for formatting (only works in local testing)
 
     # Loops through all the buy orders
-    for buyOrder in order_depth.buy_orders:
+    for buyOrder in orderDepth.buy_orders:
 
       # Gets the asking price and the amount of the bid
       bidPrice = buyOrder
-      bidAmount = order_depth.buy_orders[buyOrder]
+      bidAmount = orderDepth.buy_orders[buyOrder]
     
     # print() # Prints a newline for formatting (only works in local testing)
 
