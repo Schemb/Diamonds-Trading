@@ -23,10 +23,10 @@ class Trader:
     for product in state.order_depths:
         
       if product == "AMETHYSTS":
-        self.DoAmethystTrading(self, product, state.order_depths[product])
+        self.DoAmethystTrading(self, state.order_depths[product])
 
       elif product == "STARFRUIT":
-        self.DoStarfruitTrading(self, product, state.order_depths[product])
+        self.DoStarfruitTrading(self, state.order_depths[product])
 
     print("=--  Trading ended!  --=\n")
 
@@ -36,8 +36,8 @@ class Trader:
 
     return self.result, conversions, traderData
 
-  def DoAmethystTrading(self, product, orderDepth: OrderDepth):
-    print("=", product, "=")
+  def DoAmethystTrading(self, orderDepth: OrderDepth):
+    print("= AMETHYSTS =")
 
     # A list of any orders made
     orders: List[Order] = []
@@ -62,7 +62,7 @@ class Trader:
         print("\tBUY", str(-askAmount) + "x", askPrice)
 
         # Appends the buy to the orders list
-        orders.append(Order(product, askPrice, -askAmount))
+        orders.append(Order("AMETHYSTS", askPrice, -askAmount))
 
       else:
         # Prints what the order was, even though it wasn't bought
@@ -87,7 +87,7 @@ class Trader:
         print("\tSELL", str(bidAmount) + "x", bidPrice)
 
         # Appends the sell to the orders list
-        orders.append(Order(product, bidPrice, -bidAmount))
+        orders.append(Order("AMETHYSTS", bidPrice, -bidAmount))
 
       else:
         # Prints what the order was, even though nothing was sold
@@ -96,14 +96,14 @@ class Trader:
     print() # Prints a newline for formatting (only works in local testing)
 
     # Adds the order to the results dictionary
-    self.result[product] = orders
+    self.result["AMETHYSTS"] = orders
     
     # Prints of the current trading attributes relating to amethst
     print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
     print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
     
-  def DoStarfruitTrading(self, product, orderDepth: OrderDepth):
-    print("=", product, "=")
+  def DoStarfruitTrading(self, orderDepth: OrderDepth):
+    print("= STARFRUIT =")
 
     # A list of any orders made
     orders: List[Order] = []
@@ -127,7 +127,7 @@ class Trader:
     # print() # Prints a newline for formatting (only works in local testing)
 
     # Adds the order to the results dictionary
-    self.result[product] = orders
+    self.result["STARFRUIT"] = orders
     
     # Prints of the current trading attributes relating to amethst
     print("\tCurrently holding", str(self.starfruitAmount), "starfruit!")
