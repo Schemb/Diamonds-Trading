@@ -6,3 +6,8 @@ import typing
 import jsonpickle
 from datamodel import OrderDepth, UserID, TradingState, Order
 
+class Trader:
+    def run(self, state: TradingState):
+        
+
+        return 
