@@ -1,3 +1,0 @@
-jaraco.packaging
-rst.linker
-Sphinx
