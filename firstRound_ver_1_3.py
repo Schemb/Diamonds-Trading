@@ -13,6 +13,8 @@ class Trader:
   starfruitAmount = 0     # The number of starfruit that is currently held (must be within the position limit)
   starfruitPosLimit = 0   # The position limits for starfruit 
 
+
+
   def run(self, state: TradingState):
     # Resets the results dictionary
     self.result = {}
@@ -23,10 +25,10 @@ class Trader:
     for product in state.order_depths:
         
       if product == "AMETHYSTS":
-        self.DoAmethystTrading(self, state.order_depths[product])
+        self.DoAmethystTrading(state.order_depths[product])
 
       elif product == "STARFRUIT":
-        self.DoStarfruitTrading(self, state.order_depths[product])
+        self.DoStarfruitTrading(state.order_depths[product])
 
     print("=--  Trading ended!  --=\n")
 
@@ -35,6 +37,8 @@ class Trader:
     conversions = 1
 
     return self.result, conversions, traderData
+
+
 
   def DoAmethystTrading(self, orderDepth: OrderDepth):
     print("= AMETHYSTS =")
@@ -102,6 +106,8 @@ class Trader:
     print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
     print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
     
+
+
   def DoStarfruitTrading(self, orderDepth: OrderDepth):
     print("= STARFRUIT =")
 
