@@ -55,6 +55,11 @@ class Trader:
       # Gets the price and size of the order
       askPrice = sellOrder
       askAmount = orderDepth.sell_orders[sellOrder]
+
+      # Don't buy this order if it would exceed the position limit
+      if (self.amethystAmount - askAmount > self.amethystPosLimit):
+        print("\tDIDN'T BUY (position limit exceeded)", str(-askAmount) + "x", askPrice)
+        continue
       
       if int(askPrice) < median:  # If they are being sold less than the median
 
@@ -70,7 +75,7 @@ class Trader:
 
       else:
         # Prints what the order was, even though it wasn't bought
-        print("\tDIDN'T BUY", str(-askAmount) + "x", askPrice)
+        print("\tDIDN'T BUY (too expensive)", str(-askAmount) + "x", askPrice)
 
     print() # Prints a newline for formatting (only works in local testing)
 
@@ -80,6 +85,11 @@ class Trader:
       # Gets the asking price and the amount of the bid
       bidPrice = buyOrder
       bidAmount = orderDepth.buy_orders[buyOrder]
+
+      # Don't sell this order if it would exceed the position limit
+      if (self.amethystAmount - bidAmount < -self.amethystPosLimit):
+        print("\tDIDN'T SELL (position limit exceeded)", str(bidAmount) + "x", bidPrice)
+        continue
 
       if int(bidPrice) > median: # If they are paying above the median
 

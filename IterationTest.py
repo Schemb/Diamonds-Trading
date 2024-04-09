@@ -1,5 +1,5 @@
 from datamodel import Listing, OrderDepth, Trade, TradingState, Symbol, Product
-from firstRound_ver_1_3 import Trader
+from firstRound_ver_1_4 import Trader
 
 timestamp = 1000
 
@@ -67,9 +67,8 @@ state = TradingState(
 	observations
 )
 
-test = Trader
+test = Trader()
 
-test.run(state)
 test.run(state)
 test.run(state)
 test.run(state)
