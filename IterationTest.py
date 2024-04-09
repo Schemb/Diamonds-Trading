@@ -1,5 +1,5 @@
 from datamodel import Listing, OrderDepth, Trade, TradingState, Symbol, Product
-from Basic import Trader
+from firstRound_ver_1_0 import Trader
 
 timestamp = 1000
 
@@ -9,9 +9,9 @@ listings = {
 		product="AMETHYSTS", 
 		denomination= "SEASHELLS"
 	),
-	"PRODUCT2": Listing(
-		symbol="PRODUCT2", 
-		product="PRODUCT2", 
+	"STARFRUIT": Listing(
+		symbol="STARFRUIT", 
+		product="STARFRUIT", 
 		denomination= "SEASHELLS"
 	),
 }
@@ -21,17 +21,17 @@ first.buy_orders={10: 7, 9: 5}
 first.sell_orders={11: -4, 12: -8}
 
 second = OrderDepth
-second.buy_orders={142: 3, 141: 5}
-second.sell_orders={144: -5, 145: -8}
+second.buy_orders={10001: 3, 345: 14, 20000: 1}
+second.sell_orders={1244: -5, 145: -1, 1000145: -8}
 
 order_depths = {
-	"AMETHYSTS": first,
-	"PRODUCT2": second
+	"AMETHYSTS": second,
+	"STARFRUIT": first
 }
 
 own_trades = {
 	"AMETHYSTS": [],
-	"PRODUCT2": []
+	"STARFRUIT": []
 }
 
 market_trades = {
@@ -45,12 +45,12 @@ market_trades = {
 			timestamp=900
 		)
 	],
-	"PRODUCT2": []
+	"STARFRUIT": []
 }
 
 position = {
 	"AMETHYSTS": 3,
-	"PRODUCT2": -5
+	"STARFRUIT": -5
 }
 
 observations = {}
@@ -69,4 +69,5 @@ state = TradingState(
 
 test = Trader
 
+test.run(test, state)
 test.run(test, state)
