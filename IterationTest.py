@@ -21,8 +21,8 @@ first.buy_orders={10: 7, 9: 5}
 first.sell_orders={11: -4, 12: -8}
 
 second = OrderDepth
-second.buy_orders={10001: 3, 345: 14, 20000: 1}
-second.sell_orders={1244: -5, 145: -1, 1000145: -8}
+second.buy_orders={10001: 3, 9997: 14, 10005: 2, 10002: 7}
+second.sell_orders={10002: -5, 9997: -1, 9995: -3, 9999: -5}
 
 order_depths = {
 	"AMETHYSTS": second,
@@ -69,6 +69,4 @@ state = TradingState(
 
 test = Trader()
 
-test.run(state)
-test.run(state)
 test.run(state)

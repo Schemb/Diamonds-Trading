@@ -8,6 +8,7 @@ class Trader:
   amethystMargin = 0      # Variable to store the current profit/loss of amethyst
   amethystAmount = 0      # The number of amethyst that is currently held (must be within the position limit)
   amethystPosLimit = 20   # The position limits for amethyst 
+  amethestBuyIn = [0, 1, 3, 9, 27, 40]
 
   starfruitMargin = 0     # Variable to store the current profit/loss of starfruit
   starfruitAmount = 0     # The number of starfruit that is currently held (must be within the position limit)
@@ -54,28 +55,38 @@ class Trader:
       
       # Gets the price and size of the order
       askPrice = sellOrder
-      askAmount = orderDepth.sell_orders[sellOrder]
-
-      # Don't buy this order if it would exceed the position limit
-      if (self.amethystAmount - askAmount > self.amethystPosLimit):
-        print("\tDIDN'T BUY (position limit exceeded)", str(-askAmount) + "x", askPrice)
-        continue
+      askAmount = -orderDepth.sell_orders[sellOrder]
       
       if int(askPrice) < median:  # If they are being sold less than the median
 
-        # Adjust stored amethyst variables based on the order
-        self.amethystMargin = self.amethystMargin + (askAmount * askPrice)
-        self.amethystAmount = self.amethystAmount - askAmount
+        # Determine the difference in price
+        difference = median - askPrice
+
+        # Don't buy if the difference is out of range
+        if difference > 5:
+          continue
+
+        # Determine how many should be bought, between the minimum of:
+        #   - How many are being sold
+        #   - How many it can buy without exceeding the position limit
+        #   - How many it wants to buy based on the difference in price (can be changed)
+        buyAmount = min(askAmount,
+                        self.amethestBuyIn[difference], 
+                        self.amethystPosLimit - self.amethystAmount)
+
+        # Adjust stored amethyst variables based on how the order was executed
+        self.amethystMargin = self.amethystMargin - (buyAmount * askPrice)
+        self.amethystAmount = self.amethystAmount + buyAmount
 
         # Prints how many were bought, and at what value
-        print("\tBUY", str(-askAmount) + "x", askPrice)
+        print("\tBUY", str(buyAmount) + "x", askPrice)
 
         # Appends the buy to the orders list
-        orders.append(Order("AMETHYSTS", askPrice, -askAmount))
+        orders.append(Order("AMETHYSTS", askPrice, buyAmount))
 
       else:
         # Prints what the order was, even though it wasn't bought
-        print("\tDIDN'T BUY (too expensive)", str(-askAmount) + "x", askPrice)
+        print("\tDIDN'T BUY (too expensive)", str(askAmount) + "x", askPrice)
 
     print() # Prints a newline for formatting (only works in local testing)
 
@@ -86,22 +97,32 @@ class Trader:
       bidPrice = buyOrder
       bidAmount = orderDepth.buy_orders[buyOrder]
 
-      # Don't sell this order if it would exceed the position limit
-      if (self.amethystAmount - bidAmount < -self.amethystPosLimit):
-        print("\tDIDN'T SELL (position limit exceeded)", str(bidAmount) + "x", bidPrice)
-        continue
-
       if int(bidPrice) > median: # If they are paying above the median
+        
+        # Determine the difference in price
+        difference = bidPrice - median
+
+        # Don't buy if the difference is out of range
+        if difference > 5:
+          continue
+
+        # Determine how many should be sold, between the minimum of:
+        #   - How many are being bought
+        #   - How many it can sell without exceeding the position limit
+        #   - How many it wants to sell based on the difference in price (can be changed)
+        sellAmount = min(bidAmount,
+                        self.amethestBuyIn[difference], 
+                        self.amethystPosLimit + self.amethystAmount)
 
         # Adjust stored amethyst variables based on the order
-        self.amethystMargin = self.amethystMargin + (bidAmount * bidPrice)
-        self.amethystAmount = self.amethystAmount - bidAmount
+        self.amethystMargin = self.amethystMargin + (sellAmount * bidPrice)
+        self.amethystAmount = self.amethystAmount - sellAmount
 
         # Prints how many were sold, and at what value
-        print("\tSELL", str(bidAmount) + "x", bidPrice)
+        print("\tSELL", str(sellAmount) + "x", bidPrice)
 
         # Appends the sell to the orders list
-        orders.append(Order("AMETHYSTS", bidPrice, -bidAmount))
+        orders.append(Order("AMETHYSTS", bidPrice, -sellAmount))
 
       else:
         # Prints what the order was, even though nothing was sold
