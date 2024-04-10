@@ -1,5 +1,5 @@
 from datamodel import Listing, OrderDepth, Trade, TradingState, Symbol, Product
-from firstRound_ver_1_6 import Trader
+from firstRound_ver_1_7 import Trader
 
 timestamp = 99700
 
@@ -41,7 +41,7 @@ market_trades = {
 			price=11,
 			quantity=4,
 			buyer="",
-			seller="",
+			seller="SUBMISSION",
 			timestamp=900
 		)
 	],

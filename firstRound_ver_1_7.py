@@ -20,6 +20,11 @@ class Trader:
     # Resets the results dictionary
     self.result = {}
     
+    self.amethystAmount = state.position["AMETHYSTS"]
+
+    if state.timestamp != 0:
+      self.CheckMarketTrades(state)
+    
     print("--= Trading started! =--\n")
     
     # Loops through all the order depths for each product (currently "AMETHYSTS" and "STARFRUIT")
@@ -44,7 +49,6 @@ class Trader:
   def DoAmethystTrading(self, state: TradingState):
     print("= AMETHYSTS =")
 
-    
     # A list of any orders made
     orders: List[Order] = []
 
@@ -53,13 +57,6 @@ class Trader:
 
     # The precalculated median of the amethyst price, used to determine when to buy/sell
     median = 10000
-
-    # Used to determine if any of the amethysts that the algorithm
-    #   tries to sell in the final iterations were bought by any bots
-    if (state.position["AMETHYSTS"] != self.amethystAmount):
-      posDifference = self.amethystAmount - state.position["AMETHYSTS"]
-      self.amethystAmount = state.position["AMETHYSTS"]
-      self.amethystMargin = self.amethystMargin + posDifference * median
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
@@ -86,7 +83,6 @@ class Trader:
                         self.amethystPosLimit - self.amethystAmount)
 
         # Adjust stored amethyst variables based on how the order was executed
-        self.amethystMargin = self.amethystMargin - (buyAmount * askPrice)
         self.amethystAmount = self.amethystAmount + buyAmount
 
         # Prints how many were bought, and at what value
@@ -126,7 +122,6 @@ class Trader:
                         self.amethystPosLimit + self.amethystAmount)
 
         # Adjust stored amethyst variables based on the order
-        self.amethystMargin = self.amethystMargin + (sellAmount * bidPrice)
         self.amethystAmount = self.amethystAmount - sellAmount
 
         # Prints how many were sold, and at what value
@@ -156,10 +151,6 @@ class Trader:
 
     # Adds the order to the results dictionary
     self.result["AMETHYSTS"] = orders
-    
-    # Prints of the current trading attributes relating to amethst
-    print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
-    print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
     
 
 
@@ -196,3 +187,41 @@ class Trader:
     # Prints of the current trading attributes relating to amethst
     print("\tCurrently holding", str(self.starfruitAmount), "starfruit!")
     print("\tCurrent profit margin for starfruit is:", str(self.starfruitMargin), '\n')
+
+
+
+  # This function checks all the market trades from the previous iteration, 
+  # updating stored varaibles to reflect profits and positions
+  def CheckMarketTrades(self, state: TradingState):
+
+    print("The results of the previous trading period!")
+
+    # Loops through all the market trades for each product
+    for product in state.listings:
+      if product != "AMETHYSTS": # Temporary check so that only amethyst trades are checked
+        continue
+      for trade in state.market_trades[product]:
+
+        # If the algorithm was the buyer of the order
+        if trade.buyer == "SUBMISSION":
+
+          # Adjusts margin accordingly
+          self.amethystMargin = self.amethystMargin - trade.price * trade.quantity
+
+          # Prints how many were bought, and at what value
+          print("\tBOUGHT", str(trade.quantity) + "x", trade.price)
+
+        # If the algorithm was the seller of the order
+        if trade.seller == "SUBMISSION":
+
+          # Adjusts margin accordingly
+          self.amethystMargin = self.amethystMargin + trade.price * trade.quantity
+
+          # Prints how many were sold, and at what value
+          print("\tSOLD", str(trade.quantity) + "x", trade.price)
+          
+      # Prints of the current trading attributes relating to amethst
+      print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
+      print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
+      print() # Prints a newline for formatting (only works in local testing)
+
