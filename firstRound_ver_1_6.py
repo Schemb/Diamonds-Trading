@@ -26,10 +26,10 @@ class Trader:
     for product in state.order_depths:
         
       if product == "AMETHYSTS":
-        self.DoAmethystTrading(state.order_depths[product])
+        self.DoAmethystTrading(state)
 
       elif product == "STARFRUIT":
-        self.DoStarfruitTrading(state.order_depths[product])
+        self.DoStarfruitTrading(state)
 
     print("=--  Trading ended!  --=\n")
 
@@ -41,14 +41,25 @@ class Trader:
 
 
 
-  def DoAmethystTrading(self, orderDepth: OrderDepth):
+  def DoAmethystTrading(self, state: TradingState):
     print("= AMETHYSTS =")
 
+    
     # A list of any orders made
     orders: List[Order] = []
 
+    # The buy and sell orders
+    orderDepth: OrderDepth = state.order_depths["AMETHYSTS"]
+
     # The precalculated median of the amethyst price, used to determine when to buy/sell
     median = 10000
+
+    # Used to determine if any of the amethysts that the algorithm
+    #   tries to sell in the final iterations were bought by any bots
+    if (state.position["AMETHYSTS"] != self.amethystAmount):
+      posDifference = self.amethystAmount - state.position["AMETHYSTS"]
+      self.amethystAmount = state.position["AMETHYSTS"]
+      self.amethystMargin = self.amethystMargin + posDifference * median
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
@@ -128,6 +139,19 @@ class Trader:
         # Prints what the order was, even though nothing was sold
         print("\tDIDN'T SELL", str(bidAmount) + "x", bidPrice)
     
+    # Attempts to sell as much as possible in the last 5 iterations
+    if state.timestamp >= 99500:
+      print("\tAttempting to sell remaining")
+
+      # However many positions are left to sell
+      sellAmount = self.amethystPosLimit + self.amethystAmount
+
+      # Prints how many were sold, and at what value
+      print("\tSELL", str(sellAmount) + "x", median)
+
+      # Sells remaining at median price
+      orders.append(Order("AMETHYSTS", median, -sellAmount))
+
     print() # Prints a newline for formatting (only works in local testing)
 
     # Adds the order to the results dictionary
@@ -139,11 +163,14 @@ class Trader:
     
 
 
-  def DoStarfruitTrading(self, orderDepth: OrderDepth):
+  def DoStarfruitTrading(self, state: TradingState):
     print("= STARFRUIT =")
 
     # A list of any orders made
     orders: List[Order] = []
+    
+    # The buy and sell orders
+    orderDepth: OrderDepth = state.order_depths["STARFRUIT"]
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
