@@ -15,7 +15,7 @@ class Trader:
 
   productInfo: dict[Symbol, ProductInfo] = {} # A dictionary of useful product info such as margin or position
 
-  amethestBuyIn = [0, 1, 3, 9, 27, 40] # A test array that determines how much should be bought based on price
+  amethystBuyIn = [0, 1, 3, 9, 27, 40] # A test array that determines how much should be bought based on price
 
 
 
@@ -84,7 +84,7 @@ class Trader:
         #   - How many it can buy without exceeding the position limit
         #   - How many it wants to buy based on the difference in price (can be changed)
         buyAmount = min(askAmount,
-                        self.amethestBuyIn[difference], 
+                        self.amethystBuyIn[difference], 
                         self.productInfo[product].posLimit - self.productInfo[product].amount)
 
         # Adjust stored amethyst variables based on how the order was executed
@@ -123,7 +123,7 @@ class Trader:
         #   - How many it can sell without exceeding the position limit
         #   - How many it wants to sell based on the difference in price (can be changed)
         sellAmount = min(bidAmount,
-                        self.amethestBuyIn[difference], 
+                        self.amethystBuyIn[difference], 
                         self.productInfo[product].posLimit + self.productInfo[product].amount)
 
         # Adjust stored amethyst variables based on the order
@@ -205,7 +205,7 @@ class Trader:
       for trade in state.own_trades[symbol]:
 
         # Checks to make sure that the trade is current and not from past iterations
-        if trade.timestamp != state.timestamp:
+        if trade.timestamp != state.timestamp - 100:
           continue
 
         print("=", symbol, "=")
