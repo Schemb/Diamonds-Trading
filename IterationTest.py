@@ -1,5 +1,5 @@
 from datamodel import Listing, OrderDepth, Trade, TradingState, Symbol, Product
-from firstRound_ver_1_7 import Trader
+from firstRound_ver_1_8 import Trader
 
 timestamp = 99700
 
@@ -30,7 +30,15 @@ order_depths = {
 }
 
 own_trades = {
-	"AMETHYSTS": [],
+	"AMETHYSTS": [
+		Trade(
+			symbol="AMETHYSTS",
+			price=11,
+			quantity=4,
+			buyer="SUBMISSION",
+			seller="",
+			timestamp=900
+		)],
 	"STARFRUIT": []
 }
 
@@ -41,7 +49,7 @@ market_trades = {
 			price=11,
 			quantity=4,
 			buyer="",
-			seller="SUBMISSION",
+			seller="",
 			timestamp=900
 		)
 	],
@@ -70,8 +78,5 @@ state = TradingState(
 test = Trader()
 
 test.run(state)
-position["AMETHYSTS"] = test.amethystAmount
 test.run(state)
-position["AMETHYSTS"] = test.amethystAmount
 test.run(state)
-position["AMETHYSTS"] = test.amethystAmount

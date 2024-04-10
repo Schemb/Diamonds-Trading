@@ -1,29 +1,33 @@
-from datamodel import OrderDepth, UserId, TradingState, Order
+from datamodel import OrderDepth, UserId, Symbol, TradingState, Order
 from typing import List
 import string
+
+# Contains the profit, position, and position limit of a product
+class ProductInfo:
+  def __init__(self, posLimit: int):
+    self.margin: float = 0           # Variable to store the current profit/loss of the product
+    self.amount: int = 0           # How much of this product is currently held (must be within the position limit)
+    self.posLimit: int = posLimit  # The position limit of this product
+
 
 class Trader:
   result = {}   # The result of a trading iteration
 
-  amethystMargin = 0      # Variable to store the current profit/loss of amethyst
-  amethystAmount = 0      # The number of amethyst that is currently held (must be within the position limit)
-  amethystPosLimit = 20   # The position limits for amethyst 
-  amethestBuyIn = [0, 1, 3, 9, 27, 40]
+  productInfo: dict[Symbol, ProductInfo] = {} # A dictionary of useful product info such as margin or position
 
-  starfruitMargin = 0     # Variable to store the current profit/loss of starfruit
-  starfruitAmount = 0     # The number of starfruit that is currently held (must be within the position limit)
-  starfruitPosLimit = 0   # The position limits for starfruit 
+  amethestBuyIn = [0, 1, 3, 9, 27, 40] # A test array that determines how much should be bought based on price
 
 
 
   def run(self, state: TradingState):
     # Resets the results dictionary
     self.result = {}
-    
-    self.amethystAmount = state.position["AMETHYSTS"]
 
-    if state.timestamp != 0:
-      self.CheckMarketTrades(state)
+    # Initialised productInfo if this is the first iteration
+    if state.timestamp == 0:
+      self.InitProductInfo()
+
+    self.CheckMarketTrades(state)
     
     print("--= Trading started! =--\n")
     
@@ -48,12 +52,13 @@ class Trader:
 
   def DoAmethystTrading(self, state: TradingState):
     print("= AMETHYSTS =")
+    product = "AMETHYSTS"
 
     # A list of any orders made
     orders: List[Order] = []
 
     # The buy and sell orders
-    orderDepth: OrderDepth = state.order_depths["AMETHYSTS"]
+    orderDepth: OrderDepth = state.order_depths[product]
 
     # The precalculated median of the amethyst price, used to determine when to buy/sell
     median = 10000
@@ -71,7 +76,7 @@ class Trader:
         difference = median - askPrice
 
         # Don't buy if the difference is out of range
-        if difference > 5:
+        if difference > 5 or difference < 0:
           continue
 
         # Determine how many should be bought, between the minimum of:
@@ -80,16 +85,16 @@ class Trader:
         #   - How many it wants to buy based on the difference in price (can be changed)
         buyAmount = min(askAmount,
                         self.amethestBuyIn[difference], 
-                        self.amethystPosLimit - self.amethystAmount)
+                        self.productInfo[product].posLimit - self.productInfo[product].amount)
 
         # Adjust stored amethyst variables based on how the order was executed
-        self.amethystAmount = self.amethystAmount + buyAmount
+        self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
 
         # Prints how many were bought, and at what value
         print("\tBUY", str(buyAmount) + "x", askPrice)
 
         # Appends the buy to the orders list
-        orders.append(Order("AMETHYSTS", askPrice, buyAmount))
+        orders.append(Order(product, askPrice, buyAmount))
 
       else:
         # Prints what the order was, even though it wasn't bought
@@ -110,7 +115,7 @@ class Trader:
         difference = bidPrice - median
 
         # Don't buy if the difference is out of range
-        if difference > 5:
+        if difference > 5 or difference < 0:
           continue
 
         # Determine how many should be sold, between the minimum of:
@@ -119,49 +124,37 @@ class Trader:
         #   - How many it wants to sell based on the difference in price (can be changed)
         sellAmount = min(bidAmount,
                         self.amethestBuyIn[difference], 
-                        self.amethystPosLimit + self.amethystAmount)
+                        self.productInfo[product].posLimit + self.productInfo[product].amount)
 
         # Adjust stored amethyst variables based on the order
-        self.amethystAmount = self.amethystAmount - sellAmount
+        self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
 
         # Prints how many were sold, and at what value
         print("\tSELL", str(sellAmount) + "x", bidPrice)
 
         # Appends the sell to the orders list
-        orders.append(Order("AMETHYSTS", bidPrice, -sellAmount))
+        orders.append(Order(product, bidPrice, -sellAmount))
 
       else:
         # Prints what the order was, even though nothing was sold
         print("\tDIDN'T SELL", str(bidAmount) + "x", bidPrice)
     
-    # Attempts to sell as much as possible in the last 5 iterations
-    if state.timestamp >= 99500:
-      print("\tAttempting to sell remaining")
-
-      # However many positions are left to sell
-      sellAmount = self.amethystPosLimit + self.amethystAmount
-
-      # Prints how many were sold, and at what value
-      print("\tSELL", str(sellAmount) + "x", median)
-
-      # Sells remaining at median price
-      orders.append(Order("AMETHYSTS", median, -sellAmount))
-
     print() # Prints a newline for formatting (only works in local testing)
 
     # Adds the order to the results dictionary
-    self.result["AMETHYSTS"] = orders
+    self.result[product] = orders
     
 
 
   def DoStarfruitTrading(self, state: TradingState):
     print("= STARFRUIT =")
+    product = "STARFRUIT"
 
     # A list of any orders made
     orders: List[Order] = []
     
     # The buy and sell orders
-    orderDepth: OrderDepth = state.order_depths["STARFRUIT"]
+    orderDepth: OrderDepth = state.order_depths[product]
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
@@ -182,31 +175,46 @@ class Trader:
     # print() # Prints a newline for formatting (only works in local testing)
 
     # Adds the order to the results dictionary
-    self.result["STARFRUIT"] = orders
-    
-    # Prints of the current trading attributes relating to amethst
-    print("\tCurrently holding", str(self.starfruitAmount), "starfruit!")
-    print("\tCurrent profit margin for starfruit is:", str(self.starfruitMargin), '\n')
+    self.result[product] = orders
 
 
 
   # This function checks all the market trades from the previous iteration, 
-  # updating stored varaibles to reflect profits and positions
+  # updating stored variables to reflect profits and positions
   def CheckMarketTrades(self, state: TradingState):
+
 
     print("The results of the previous trading period!")
 
-    # Loops through all the market trades for each product
-    for product in state.listings:
-      if product != "AMETHYSTS": # Temporary check so that only amethyst trades are checked
+    # Loops through all the products
+    for symbol in self.productInfo:
+
+      # Updates the position of the product held if available
+      try:
+        self.productInfo[symbol].amount = state.position[symbol]
+      except:
+        self.productInfo[symbol].amount = 0
+
+      # Checks to make sure that trades have been made before (other wise the own_trades dict is empty)
+      try:
+        state.own_trades[symbol]
+      except:
         continue
-      for trade in state.market_trades[product]:
+
+      # Loops through all the trades for this product
+      for trade in state.own_trades[symbol]:
+
+        # Checks to make sure that the trade is current and not from past iterations
+        if trade.timestamp != state.timestamp:
+          continue
+
+        print("=", symbol, "=")
 
         # If the algorithm was the buyer of the order
         if trade.buyer == "SUBMISSION":
 
           # Adjusts margin accordingly
-          self.amethystMargin = self.amethystMargin - trade.price * trade.quantity
+          self.productInfo[symbol].margin = self.productInfo[symbol].margin - trade.price * trade.quantity
 
           # Prints how many were bought, and at what value
           print("\tBOUGHT", str(trade.quantity) + "x", trade.price)
@@ -215,13 +223,22 @@ class Trader:
         if trade.seller == "SUBMISSION":
 
           # Adjusts margin accordingly
-          self.amethystMargin = self.amethystMargin + trade.price * trade.quantity
+          self.productInfo[symbol].margin = self.productInfo[symbol].margin + trade.price * trade.quantity
 
           # Prints how many were sold, and at what value
           print("\tSOLD", str(trade.quantity) + "x", trade.price)
           
-      # Prints of the current trading attributes relating to amethst
-      print("\tCurrently holding", str(self.amethystAmount), "amethyst(s)!")
-      print("\tCurrent profit margin for amethyst is:", str(self.amethystMargin), '\n')
+      # Prints of the current trading attributes relating to the product
+      print("\tCurrently holding", str(self.productInfo[symbol].amount), symbol, "!")
+      print("\tCurrent profit margin for", symbol, "is:", str(self.productInfo[symbol].margin), '\n')
       print() # Prints a newline for formatting (only works in local testing)
 
+
+
+  # Initialises the productInfo variable
+  def InitProductInfo(self):
+    amethyst = ProductInfo(20)
+    self.productInfo["AMETHYSTS"] = amethyst
+
+    starfruit = ProductInfo(20)
+    self.productInfo["STARFRUIT"] = starfruit
