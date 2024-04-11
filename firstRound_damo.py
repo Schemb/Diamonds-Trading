@@ -3,6 +3,7 @@
 from datamodel import OrderDepth, UserId, Symbol, TradingState, Order
 from typing import Dict,List
 import string
+import numpy as np
 
 # Contains the profit, position, and position limit of a product
 class ProductInfo:
@@ -18,6 +19,7 @@ class Trader:
   productInfo: dict[Symbol, ProductInfo] = {} # A dictionary of useful product info such as margin or position
 
   amethystBuyIn = [0, 1, 3, 9, 27, 40] # A test array that determines how much should be bought based on price
+  starfruitBuyIn = [0, 5, 10] # should be changed to get good buy in rates relative to price
 
 
 
@@ -158,8 +160,15 @@ class Trader:
     # The buy and sell orders
     orderDepth: OrderDepth = state.order_depths[product]
 
-    longAverage = 
-    shortAverage = 
+    # array including prices from last 3000 of timestamps
+    long_prices_array = np.array([5044, 5043, 5044, 5049, 5048, 5047, 5044, 5043, 5043, 5046, 5046, 5047, 5044])
+
+    # array including prices going back 1000 in timestamps
+    short_prices_array = np.array([5046, 5047, 5044])
+
+    #get averages from starting arrays
+    longAverage = np.average(long_prices_array)
+    shortAverage = np.average(short_prices_array)
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
@@ -167,6 +176,31 @@ class Trader:
       # Gets the price and size of the order
       askPrice = sellOrder
       askAmount = orderDepth.sell_orders[sellOrder]
+
+      factor: int = 0
+      buyInDifference = shortAverage - sellOrder
+      
+
+      if longAverage > shortAverage and shortAverage >= sellOrder:
+
+        if buyInDifference == 0:
+          factor = 0
+        elif buyInDifference > 0 and buyInDifference < 2:
+          factor = 1
+        elif buyInDifference >= 2:
+          factor = 2
+
+
+
+      elif longAverage > shortAverage and shortAverage < sellOrder:
+        # take the sell order (buy at that price)
+        buyAmount2 = min(askAmount,
+                        self.starFruitBuyIn[factor], 
+                        self.productInfo[product].posLimit - self.productInfo[product].amount)
+      elif shortAverage > longAverage:
+        continue
+        
+
 
     # print() # Prints a newline for formatting (only works in local testing)
 
