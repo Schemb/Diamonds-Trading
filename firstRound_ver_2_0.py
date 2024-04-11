@@ -15,7 +15,7 @@ class Trader:
 
   productInfo: dict[Symbol, ProductInfo] = {} # A dictionary of useful product info such as margin or position
 
-  amethystBuyIn = [0, 1, 5, 10, 18, 20] # A test array that determines how much should be bought based on price
+  amethystBuyIn = [0, 1, 0, 10, 18, 20] # A test array that determines how much should be bought based on price
 
 
   # Initialises the productInfo variable
@@ -123,7 +123,7 @@ class Trader:
     orderDepth: OrderDepth = state.order_depths[product]
 
     # The precalculated mean of the amethyst price, used to determine when to buy/sell
-    mean = 10000
+    mean: float = 10000
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
@@ -132,7 +132,7 @@ class Trader:
       askPrice = sellOrder
       askAmount = -orderDepth.sell_orders[sellOrder]
       
-      if int(askPrice) < mean:  # If they are being sold less than the mean
+      if float(askPrice) < mean:  # If they are being sold less than the mean
 
         # Determine the difference in price
         difference = mean - askPrice
@@ -145,9 +145,9 @@ class Trader:
         #   - How many are being sold
         #   - How many it can buy without exceeding the position limit
         #   - How many it wants to buy based on the difference in price (can be changed)
-        buyAmount = min(askAmount,
-                        self.amethystBuyIn[difference], 
-                        self.productInfo[product].posLimit - self.productInfo[product].amount)
+        buyAmount = int(min(askAmount,
+                        self.amethystBuyIn[int(difference)], 
+                        self.productInfo[product].posLimit - self.productInfo[product].amount))
 
         # Adjust stored amethyst variables based on how the order was executed
         self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
@@ -171,10 +171,10 @@ class Trader:
       bidPrice = buyOrder
       bidAmount = orderDepth.buy_orders[buyOrder]
 
-      if int(bidPrice) > mean: # If they are paying above the mean
+      if float(bidPrice) > mean: # If they are paying above the mean
         
         # Determine the difference in price
-        difference = bidPrice - mean
+        difference = int(bidPrice - mean)
 
         # Don't buy if the difference is out of range
         if difference > 5 or difference < 0:
@@ -184,9 +184,9 @@ class Trader:
         #   - How many are being bought
         #   - How many it can sell without exceeding the position limit
         #   - How many it wants to sell based on the difference in price (can be changed)
-        sellAmount = min(bidAmount,
-                        self.amethystBuyIn[difference], 
-                        self.productInfo[product].posLimit + self.productInfo[product].amount)
+        sellAmount = int(min(bidAmount,
+                        self.amethystBuyIn[int(difference)], 
+                        self.productInfo[product].posLimit + self.productInfo[product].amount))
 
         # Adjust stored amethyst variables based on the order
         self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
