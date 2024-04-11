@@ -1,3 +1,5 @@
+#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
+
 from datamodel import OrderDepth, UserId, Symbol, TradingState, Order
 from typing import Dict,List
 import string
@@ -155,6 +157,9 @@ class Trader:
     
     # The buy and sell orders
     orderDepth: OrderDepth = state.order_depths[product]
+
+    longAverage = 
+    shortAverage = 
 
     # Loops through all the sell orders
     for sellOrder in orderDepth.sell_orders:
