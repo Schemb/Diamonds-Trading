@@ -162,9 +162,23 @@ class Trader:
 
     # array including prices from last 3000 of timestamps
     long_prices_array = np.array([5044, 5043, 5044, 5049, 5048, 5047, 5044, 5043, 5043, 5046, 5046, 5047, 5044])
+    for trade in state.own_trades:
+      if (state.timestamp) / 100 > 13:
+        for i in range(0,11):
+          long_prices_array[i] = long_prices_array[(i + 1)]
+        long_prices_array[12] = 500
+
+        print(" LAVG ", long_prices_array, " LAVG ")
 
     # array including prices going back 1000 in timestamps
     short_prices_array = np.array([5046, 5047, 5044])
+    for trade in state.own_trades:
+      if (state.timestamp) / 100 > 13:
+        for i in range(0,1):
+          short_prices_array[i] = 10
+        short_prices_array[2] = 500
+
+        print(" SAVG ", short_prices_array, " SAVG ")
 
     #get averages from starting arrays
     longAverage = np.average(long_prices_array)
@@ -179,7 +193,7 @@ class Trader:
 
       factor: int = 0
       buyInDifference = shortAverage - sellOrder
-      
+
 
       if longAverage > shortAverage and shortAverage >= sellOrder:
 
@@ -195,11 +209,12 @@ class Trader:
       elif longAverage > shortAverage and shortAverage < sellOrder:
         # take the sell order (buy at that price)
         buyAmount2 = min(askAmount,
-                        self.starFruitBuyIn[factor], 
+                        self.starfruitBuyIn[factor], 
                         self.productInfo[product].posLimit - self.productInfo[product].amount)
       elif shortAverage > longAverage:
         continue
-        
+
+
 
 
     # print() # Prints a newline for formatting (only works in local testing)
@@ -216,7 +231,8 @@ class Trader:
     # Adds the order to the results dictionary
     self.result[product] = orders
 
-
+    # Appends the sell to the orders list
+    orders.append(Order(product, 5040, 2))
 
   # This function checks all the market trades from the previous iteration, 
   # updating stored variables to reflect profits and positions
