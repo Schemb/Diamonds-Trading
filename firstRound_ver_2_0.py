@@ -15,7 +15,7 @@ class Trader:
 
   productInfo: dict[Symbol, ProductInfo] = {} # A dictionary of useful product info such as margin or position
 
-  amethystBuyIn = [0, 1, 0, 10, 18, 20] # A test array that determines how much should be bought based on price
+  amethystBuyIn = [0, 10, 20, 10, 18, 20] # A test array that determines how much should be bought based on price
 
 
   # Initialises the productInfo variable
@@ -146,7 +146,7 @@ class Trader:
         #   - How many it can buy without exceeding the position limit
         #   - How many it wants to buy based on the difference in price (can be changed)
         buyAmount = int(min(askAmount,
-                        self.amethystBuyIn[int(difference)], 
+                        self.amethystBuyIn[int(difference)],
                         self.productInfo[product].posLimit - self.productInfo[product].amount))
 
         # Adjust stored amethyst variables based on how the order was executed
@@ -175,6 +175,7 @@ class Trader:
         
         # Determine the difference in price
         difference = int(bidPrice - mean)
+        print("DIFFERENCE: " + str(difference) + " END DIFFERENCE ")
 
         # Don't buy if the difference is out of range
         if difference > 5 or difference < 0:
@@ -205,7 +206,6 @@ class Trader:
 
     # Adds the order to the results dictionary
     self.result[product] = orders
-
 
   def DoStarfruitTrading(self, state: TradingState):
     print("= STARFRUIT =")
