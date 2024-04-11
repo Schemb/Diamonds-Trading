@@ -2,4 +2,4 @@ message ?= $(shell bash -c 'read -p "Enter commit message: " message; echo $$mes
 git:
 	git add .
 	git commit . -m "$(message)"
-	git push -u origin main
+	git push -u origin visualiser_test
