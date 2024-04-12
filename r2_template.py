@@ -26,9 +26,9 @@ class Trader:
 
     # Initialised productInfo if this is the first iteration
     if state.timestamp == 0:
-      self.InitProductInfo()
+      self.InitProductInfo() #TODO: replace placeholder position limits in InitProductInfo() with the actual position limits
 
-    self.CheckMarketTrades(state) #TODO: replace placeholder position limits with the actual position limits
+    self.CheckMarketTrades(state) 
     
     print("--= Trading started! =--\n")
     
