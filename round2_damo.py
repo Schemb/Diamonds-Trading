@@ -85,9 +85,40 @@ class Trader:
     
 
 
+  # The price shown on starfruit graph
+  graphPrice = []
+
   def DoSTARFRUITTrading(self, state: TradingState):
     print("= STARFRUIT =")
     product = "STARFRUIT"
+
+    # Damo's equation
+    totalMarketPrice = 0
+    al2 = totalMarketPrice
+    zt = 0 # zt = sum(z(k-i))+al
+    
+    print(totalMarketPrice)
+
+    # Get t
+    # Checks to make sure that trades have been made before (other wise the own_trades dict is empty)
+    checkTrades = True
+    try:
+      state.market_trades[product]
+    except:
+      checkTrades = False
+    
+    if checkTrades:
+      for trade in state.market_trades[product]:
+        totalMarketPrice = totalMarketPrice + trade.price
+      totalMarketPrice = totalMarketPrice / len(state.market_trades[product])
+      self.graphPrice.append(totalMarketPrice)
+      
+      al1 = totalMarketPrice
+    if self.graphPrice > 1:
+      for prices in self.graphPrice:
+        zt = zt + (self.graphPrice[prices-1] - self.graphPrice[prices-2])
+        predictedPrice = zt + self.graphPrice[state.timestamp/100 - 1]
+        
 
     # A list of any orders made
     orders: List[Order] = []
@@ -95,127 +126,67 @@ class Trader:
     # The buy and sell orders
     orderDepth: OrderDepth = state.order_depths[product]
 
-    # Get averages from starting arrays
-    longAverage = np.average(self.long_prices_array)
-    shortAverage = np.average(self.short_prices_array)
+    # here
 
-    # Loops through all the sell orders
+    # Loops through all the sell orders, sees if any are worth buying from
     for sellOrder in orderDepth.sell_orders:
 
       # Gets the price and size of the order
       askPrice = sellOrder
       askAmount = -orderDepth.sell_orders[sellOrder]
 
-      if (state.timestamp) > 1300:
-        for i in range(0,11):
-          self.long_prices_array[i] = self.long_prices_array[(i + 1)]
-        self.long_prices_array[12] = askPrice
+      if predictedPrice < sellOrder:  # If...
+        #buy
+        askAmount = 3
+        # greater than
+      elif predictedPrice > sellOrder:  #sell
 
-        for i in range(0,1):
-          self.short_prices_array[i] = self.short_prices_array[(i+1)]
-        self.short_prices_array[2] = askPrice
-
-      if longAverage > shortAverage and shortAverage >= askPrice:
-
-        factor: int = 0
-        buyInDifference = abs(longAverage - askPrice)
-
-        if buyInDifference == 0:
-          factor = 0
-        elif buyInDifference > 0 and buyInDifference < 3:
-          factor = 1
-        elif buyInDifference >= 2:
-          factor = 2
-
+        sellAmount = 3
+        
         # Determine how many should be bought, between the minimum of:
         #   - How many are being sold
         #   - How many it can buy without exceeding the position limit
-        buyAmount = min(askAmount, self.productInfo[product].posLimit - self.productInfo[product].amount, self.starfruitBuyIn[factor])
+        buyAmount = min(askAmount, 
+                        self.productInfo[product].posLimit - self.productInfo[product].amount)
 
-        # Adjust stored amethyst variables based on how the order was executed
+        # Adjust how many products are being held on how the order was executed
         self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
 
-        # Prints how many were bought, and at what value
-        print("\tBUY", str(buyAmount) + "x", askPrice)
+        # Prints how many were were worth buying, and at what value
+        print("\tBUY:", str(buyAmount) + "x", askPrice)
 
         # Appends the buy to the orders list
         orders.append(Order(product, askPrice, buyAmount))
 
-      elif longAverage > shortAverage and shortAverage < askPrice:
-        buyAmount = min(askAmount, self.productInfo[product].posLimit - self.productInfo[product].amount)
-
-        # Adjust stored amethyst variables based on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
-
-        # Prints how many were bought, and at what value
-        print("\tBUY", str(buyAmount) + "x", askPrice)
-
-        # Appends the buy to the orders list
-        orders.append(Order(product, askPrice, buyAmount))
-      
-
-
-    # Loops through all the buy orders
+    # Loops through all the buy orders, sees if any are worth selling to
     for buyOrder in orderDepth.buy_orders:
 
       # Gets the asking price and the amount of the bid
       bidPrice = buyOrder
       bidAmount = orderDepth.buy_orders[buyOrder]
 
-      if (state.timestamp) > 1300:
-        for i in range(0,11):
-          self.long_prices_array[i] = self.long_prices_array[(i + 1)]
-        self.long_prices_array[12] = bidPrice
+      if "Some condition":  # If...
 
-        for i in range(0,1):
-          self.short_prices_array[i] = self.short_prices_array[(i+1)]
-        self.short_prices_array[2] = bidPrice
-      
+        # Determine how many should be sold, between the minimum of:
+        #   - How many are being bought
+        #   - How many it can sell without exceeding the position limit
+        sellAmount = min(bidAmount, 
+                         self.productInfo[product].posLimit + self.productInfo[product].amount)
 
-      if longAverage < shortAverage and shortAverage <= bidPrice:  # If they are being sold less than the median
+        # Adjust how many products are being held on how the order was executed
+        self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
 
-        factor: int = 0
-        buyInDifference = abs(bidPrice - longAverage)
+        # Prints how many were put on sale, and at what value
+        print("\tSELL", str(sellAmount) + "x", bidPrice)
 
-        if buyInDifference == 0:
-          factor = 0
-        elif buyInDifference > 0 and buyInDifference < 3:
-          factor = 1
-        elif buyInDifference >= 2:
-          factor = 2
-
-        # Determine how many should be bought, between the minimum of:
-        #   - How many are being sold
-        #   - How many it can buy without exceeding the position limit
-        sellAmount = min(bidAmount, self.productInfo[product].posLimit + self.productInfo[product].amount, self.starfruitBuyIn[factor])
-
-        # Adjust stored amethyst variables based on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount + bidAmount
-
-        # Prints how many were bought, and at what value
-        print("\tSELL", str(bidAmount) + "x", bidPrice)
-
-        # Appends the buy to the orders list
+        # Appends the sell to the orders list
         orders.append(Order(product, bidPrice, -sellAmount))
 
-      elif longAverage < shortAverage and shortAverage > bidPrice:
-        # Determine how many should be bought, between the minimum of:
-        #   - How many are being sold
-        #   - How many it can buy without exceeding the position limit
-        sellAmount = min(bidAmount, self.productInfo[product].posLimit + self.productInfo[product].amount)
-
-        # Adjust stored amethyst variables based on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount + bidAmount
-
-        # Prints how many were bought, and at what value
-        print("\tSELL", str(bidAmount) + "x", bidPrice)
-
-        # Appends the buy to the orders list
-        orders.append(Order(product, bidPrice, -sellAmount))
-
-    # Adds the orders to the results dictionary
+    # Adds the order to the results dictionary
     self.result[product] = orders
 
+
+  num_stored_orchids = 0
 
   def DoORCHIDSTrading(self, state: TradingState):
     print("= ORCHIDS =")
@@ -223,15 +194,141 @@ class Trader:
 
     sunlight = state.observations.conversionObservations[product].sunlight
     humidity = state.observations.conversionObservations[product].humidity
+    southAskPrice = state.observations.conversionObservations[product].askPrice
+    southBidPrice = state.observations.conversionObservations[product].bidPrice
+    exportFees = state.observations.conversionObservations[product].exportTariff
+    importFees = state.observations.conversionObservations[product].importTariff
+    transportFees = state.observations.conversionObservations[product].transportFees
+
     production_from_humidity = 100
     if humidity < 60:
       production_from_humidity = (2 / 5) * humidity + 76
     if humidity > 80:
       production_from_humidity = - (2 / 5) * humidity + 132
 
+    #predicted_price trading within our own market
     predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity
 
-    return 0
+    #price when we buy/import from southern archepelago
+    import_price=southAskPrice+importFees+transportFees
+
+    #price when we sell/export to the southern archepelago
+    export_revenue=southBidPrice-exportFees-transportFees
+
+
+    # ------------= Local Market Trades =------------
+    # A list of any orders made
+    orders: List[Order] = []
+
+    # The buy and sell orders
+    orderDepth: OrderDepth = state.order_depths[product]
+
+    """
+    for each product, 2 dictionaries, one buy, one sell
+
+    For example, if the buy_orders property would look like this for a certain product {9: 5, 10: 4} 
+    That would mean that there is a total buy order quantity of 5 at the price level of 9, and a total
+    buy order quantity of 4 at a price level of 10.
+
+    Players should note that in the sell_orders property, the quantities specified will be negative. 
+    E.g., {12: -3, 11: -2} would mean that the aggregated sell order volume at price level 12 is 3, 
+    and 2 at price level 11.
+    """
+
+    lowest_ask_price = -1
+    highest_ask_price = -1
+
+    quantity_sell_orders = 0
+
+    # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+    for sellOrder in orderDepth.sell_orders: #goes over the key of the dictionary
+      
+      # Gets the price and size of the order
+      askPrice = sellOrder #key
+      askAmount = -orderDepth.sell_orders[sellOrder] #values
+      quantity_sell_orders = quantity_sell_orders + askAmount
+
+      if lowest_ask_price == -1 or lowest_ask_price > askPrice:
+        lowest_ask_price = askPrice
+      if highest_ask_price < askPrice:
+        highest_ask_price = askPrice
+      
+      if askPrice < predicted_price:  # If they are asking for less than we think it will be worth
+
+        # Determine how many should be bought, between the minimum of:
+        #   - How many are being sold
+        #   - How many it can buy without exceeding the position limit
+        buyAmount = min(askAmount, 
+                        self.productInfo[product].posLimit - self.productInfo[product].amount,
+                        self.num_stored_orchids)
+
+        # Adjust how many products are being held on how the order was executed
+        self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
+
+        # Prints how many were were worth buying, and at what value
+        print("\tBUY:", str(buyAmount) + "x", askPrice)
+
+        # Appends the buy to the orders list
+        orders.append(Order(product, askPrice, buyAmount))
+
+    lowest_bid_price = 0
+    highest_bid_price = 0
+    quantity_buy_orders = 0
+
+    # Loops through all the buy orders, sees if any are worth selling to
+    for buyOrder in orderDepth.buy_orders:
+
+      # Gets the asking price and the amount of the bid
+      bidPrice = buyOrder
+      bidAmount = orderDepth.buy_orders[buyOrder]
+      quantity_buy_orders = quantity_buy_orders + bidAmount
+
+      if lowest_bid_price == -1 or lowest_bid_price > bidPrice:
+        lowest_bid_price = bidPrice
+      if highest_bid_price < bidPrice:
+        highest_bid_price = bidPrice
+
+      if bidPrice > predicted_price:  # If they are willing to buy for more then we think they will be worth in the future
+
+        # Determine how many should be sold, between the minimum of:
+        #   - How many are being bought
+        #   - How many it can sell without exceeding the position limit
+        sellAmount = min(bidAmount, 
+                         self.productInfo[product].posLimit + self.productInfo[product].amount,
+                        self.num_stored_orchids)
+
+        # Adjust how many products are being held on how the order was executed
+        self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
+
+        # Prints how many were put on sale, and at what value
+        print("\tSELL", str(sellAmount) + "x", bidPrice)
+
+        # Appends the sell to the orders list
+        orders.append(Order(product, bidPrice, -sellAmount))
+    
+    #----------=Determine whether we should buy or sell=-----------
+    conversions = 0
+    
+    #Compare the lowest sell/ask price of our own market and the import price of southern market
+    lowest_ask_price #lowest_sell_order
+    if (import_price<lowest_ask_price) and (highest_ask_price<predicted_price):
+        #we decide to import from southern market
+        quantity_import=quantity_buy_orders
+        conversions=+quantity_import #quantity our market want to buy in this iteration
+        num_stored_orchids=quantity_import
+
+    #Lowest sell price of our own market
+    highest_bid_price #highest_buy_order
+    if (export_revenue>highest_bid_price) and (predicted_price<lowest_bid_price):
+        #we decide to sell from southern market
+        quantity_export=quantity_sell_orders
+        conversions=-quantity_export #quantity our market want to sell in this iteration
+        num_stored_orchids=-quantity_export
+    
+    #if the number of orchids we hold is too great we should also export to the southern market
+    #DO IT LATER
+  
+    return conversions
 
 
 
