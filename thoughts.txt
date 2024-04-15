@@ -1,0 +1,14 @@
+Factors:
+sun light - (2.47-4.52) (hours)
+humidity (73-96)
+shipping costs (approx, 1-2.1)
+inport tariffs (-2--4)
+export tariffs (7-20)
+suitable storage space (100?)
+
+Distribution:
+dist expenses = exports + imports + shipping
+
+
+Quality:
+quality (proportional) humidity + sunlight hours
