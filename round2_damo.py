@@ -42,6 +42,8 @@ class Trader:
     
     print("--= Trading started! =--\n")
     
+    orchidConversions = 0
+
     # Loops through all the order depths for each product (currently "AMETHYSTS" and "STARFRUIT")
     for product in state.order_depths:
         
@@ -52,15 +54,13 @@ class Trader:
         self.DoSTARFRUITTrading(state)
 
       elif product == "ORCHIDS":
-        self.DoORCHIDSTrading(state)
+        orchidConversions = self.DoORCHIDSTrading(state)
 
     print("=--  Trading ended!  --=\n")
 
     traderData = "SAMPLE"
 
-    conversions = 1
-
-    return self.result, conversions, traderData
+    return self.result, orchidConversions, traderData
 
 
 
@@ -71,80 +71,14 @@ class Trader:
     # A list of any orders made
     orders: List[Order] = []
 
-    # The buy and sell orders
-    orderDepth: OrderDepth = state.order_depths[product]
+    maxBuy = self.productInfo[product].posLimit - self.productInfo[product].amount
+    maxSell = self.productInfo[product].posLimit + self.productInfo[product].amount
+    
+    # Appends the buy to the orders list
+    orders.append(Order(product, 9998, maxBuy))
 
-    # The precalculated median of the amethyst price, used to determine when to buy/sell
-    median = 10000
-
-
-    # Loops through all the sell orders, only orders valued at 9998 should (can) be bought
-    for sellOrder in orderDepth.sell_orders:
-      
-      # Gets the price and size of the order
-      askPrice = sellOrder
-      askAmount = -orderDepth.sell_orders[sellOrder]
-      
-      if int(askPrice) < median:  # If they are being sold less than the median
-
-        # Determine the difference in price
-        difference = median - askPrice
-
-        # Don't buy if the order isn't value at 9998
-        if difference != 2:
-          continue
-
-        # Determine how many should be bought, between the minimum of:
-        #   - How many are being sold
-        #   - How many it can buy without exceeding the position limit
-        buyAmount = min(askAmount + 200, self.productInfo[product].posLimit - self.productInfo[product].amount)
-
-        # Adjust stored amethyst variables based on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
-
-        # Prints how many were bought, and at what value
-        # print("\tBUY", str(buyAmount) + "x", askPrice)
-
-        # Appends the buy to the orders list
-        orders.append(Order(product, askPrice, buyAmount))
-
-      # else:
-      #   # Prints what the order was, even though it wasn't bought
-      #   print("\tDIDN'T BUY (too expensive)", str(askAmount) + "x", askPrice)
-
-    # Loops through all the buy orders, only orders valued at 10002 should (can) be sold
-    for buyOrder in orderDepth.buy_orders:
-
-      # Gets the asking price and the amount of the bid
-      bidPrice = buyOrder
-      bidAmount = orderDepth.buy_orders[buyOrder]
-
-      if int(bidPrice) > median: # If they are paying above the median
-        
-        # Determine the difference in price
-        difference = bidPrice - median
-
-        # Don't buy if the order isn't value at 9998
-        if difference != 2:
-          continue
-
-        # Determine how many should be sold, between the minimum of:
-        #   - How many are being bought
-        #   - How many it can sell without exceeding the position limit
-        sellAmount = min(bidAmount + 200, self.productInfo[product].posLimit + self.productInfo[product].amount)
-
-        # Adjust stored amethyst variables based on the order
-        self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
-
-        # Prints how many were sold, and at what value
-        # print("\tSELL", str(sellAmount) + "x", bidPrice)
-
-        # Appends the sell to the orders list
-        orders.append(Order(product, bidPrice, -sellAmount))
-
-      # else:
-      #   # Prints what the order was, even though nothing was sold
-      #   print("\tDIDN'T SELL", str(bidAmount) + "x", bidPrice)
+    # Appends the sell to the orders list
+    orders.append(Order(product, 10002, -maxSell))
 
     # Adds the order to the results dictionary
     self.result[product] = orders
@@ -287,75 +221,17 @@ class Trader:
     print("= ORCHIDS =")
     product = "ORCHIDS"
 
-    # A list of any orders made
-    orders: List[Order] = []
+    sunlight = state.observations.conversionObservations[product].sunlight
+    humidity = state.observations.conversionObservations[product].humidity
+    production_from_humidity = 100
+    if humidity < 60:
+      production_from_humidity = (2 / 5) * humidity + 76
+    if humidity > 80:
+      production_from_humidity = - (2 / 5) * humidity + 132
 
-    # The buy and sell orders
-    orderDepth: OrderDepth = state.order_depths[product]
+    predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity
 
-    self.prevSunLight[0] = self.prevSunLight[1]
-    self.prevSunLight[1] = self.prevSunLight[2]
-    self.prevSunLight[2] = state.observations.conversionObservations["ORCHIDS"].sunlight
-
-    # If there is a peak in sunlight
-    if state.timestamp > 300 and self.prevSunLight[0] <= self.prevSunLight[1] and self.prevSunLight[2] <= self.prevSunLight[1]:
-      self.sunLightPeakTimeStamp = state.timestamp
-      print("Found peak at", str(state.timestamp)) 
-
-    if self.sunLightPeakTimeStamp == -1:
-      return
-
-    # waits for 10000 timesteps (100 iterations) after sunlight has reached its peak to buy
-    if self.sunLightPeakTimeStamp + 10000 < state.timestamp:
-      # Loops through all the sell orders, sees if any are worth buying from
-      for sellOrder in orderDepth.sell_orders:
-        
-        # Gets the price and size of the order
-        askPrice = sellOrder
-        askAmount = -orderDepth.sell_orders[sellOrder]
-        
-
-        # Determine how many should be bought, between the minimum of:
-        #   - How many are being sold
-        #   - How many it can buy without exceeding the position limit
-        buyAmount = min(askAmount, 
-                         self.productInfo[product].posLimit - self.productInfo[product].amount)
-
-        # Adjust how many products are being held on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
-
-        # Prints how many were were worth buying, and at what value
-        print("\tBUY:", str(buyAmount) + "x", askPrice)
-
-        # Appends the buy to the orders list
-        orders.append(Order(product, askPrice, buyAmount))
-
-    # Sells as much as possible in the 5000 timestamps (50 iterations) after reaching peak sunlight
-    if self.sunLightPeakTimeStamp + 5000 > state.timestamp:
-      # Loops through all the buy orders, sees if any are worth selling to
-      for buyOrder in orderDepth.buy_orders:
-
-        # Gets the asking price and the amount of the bid
-        bidPrice = buyOrder
-        bidAmount = orderDepth.buy_orders[buyOrder]
-
-        # Determine how many should be sold, between the minimum of:
-        #   - How many are being bought
-        #   - How many it can sell without exceeding the position limit
-        sellAmount = min(bidAmount, 
-                         self.productInfo[product].posLimit + self.productInfo[product].amount)
-
-        # Adjust how many products are being held on how the order was executed
-        self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
-
-        # Prints how many were put on sale, and at what value
-        print("\tSELL", str(sellAmount) + "x", bidPrice)
-
-        # Appends the sell to the orders list
-        orders.append(Order(product, bidPrice, -sellAmount))
-
-    # Adds the order to the results dictionary
-    self.result[product] = orders
+    return 0
 
 
 
