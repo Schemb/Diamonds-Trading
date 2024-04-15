@@ -1,3 +1,5 @@
+# git acces token: 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
+
 from datamodel import OrderDepth, Symbol, TradingState, Order
 from typing import List
 import numpy as np
