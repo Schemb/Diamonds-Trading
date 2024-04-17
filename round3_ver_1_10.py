@@ -56,6 +56,10 @@ class Trader:
 
       elif product == "ORCHIDS":
         orchidConversions = self.DoORCHIDSTrading(state)
+        print(str(orchidConversions))
+
+      elif product == "GIFT_BASKET":
+        self.DoGIFT_BASKETTrading(state)
 
     print("=--  Trading ended!  --=\n")
 
@@ -189,19 +193,19 @@ class Trader:
     self.result[product] = orders
 
 
-  num_stored_orchids = 0
-
   def DoORCHIDSTrading(self, state: TradingState):
     print("= ORCHIDS =")
     product = "ORCHIDS"
 
-    sunlight = state.observations.conversionObservations[product].sunlight
-    humidity = state.observations.conversionObservations[product].humidity
-    southAskPrice = state.observations.conversionObservations[product].askPrice
-    southBidPrice = state.observations.conversionObservations[product].bidPrice
-    exportFees = state.observations.conversionObservations[product].exportTariff
-    importFees = state.observations.conversionObservations[product].importTariff
-    transportFees = state.observations.conversionObservations[product].transportFees
+    orchidInfo = state.observations.conversionObservations[product]
+
+    sunlight =      orchidInfo.sunlight
+    humidity =      orchidInfo.humidity
+    southAskPrice = orchidInfo.askPrice
+    southBidPrice = orchidInfo.bidPrice
+    exportFees =    orchidInfo.exportTariff
+    importFees =    orchidInfo.importTariff
+    transportFees = orchidInfo.transportFees
 
     production_from_humidity = 100
     if humidity < 60:
@@ -210,14 +214,14 @@ class Trader:
       production_from_humidity = - (2 / 5) * humidity + 132
 
     #predicted_price trading within our own market
-    predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity
+    predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity + 500
+    print("The predicted price for Orchids is:", predicted_price)
 
     #price when we buy/import from southern archepelago
     import_price=southAskPrice+importFees+transportFees
 
     #price when we sell/export to the southern archepelago
     export_revenue=southBidPrice-exportFees-transportFees
-
 
     # ------------= Local Market Trades =------------
     # A list of any orders made
@@ -262,8 +266,7 @@ class Trader:
         #   - How many are being sold
         #   - How many it can buy without exceeding the position limit
         buyAmount = min(askAmount, 
-                        self.productInfo[product].posLimit - self.productInfo[product].amount,
-                        self.num_stored_orchids)
+                        self.productInfo[product].posLimit - self.productInfo[product].amount)
 
         # Adjust how many products are being held on how the order was executed
         self.productInfo[product].amount = self.productInfo[product].amount + buyAmount
@@ -297,8 +300,7 @@ class Trader:
         #   - How many are being bought
         #   - How many it can sell without exceeding the position limit
         sellAmount = min(bidAmount, 
-                         self.productInfo[product].posLimit + self.productInfo[product].amount,
-                        self.num_stored_orchids)
+                         self.productInfo[product].posLimit + self.productInfo[product].amount)
 
         # Adjust how many products are being held on how the order was executed
         self.productInfo[product].amount = self.productInfo[product].amount - sellAmount
@@ -310,29 +312,130 @@ class Trader:
         orders.append(Order(product, bidPrice, -sellAmount))
     
     #----------=Determine whether we should buy or sell=-----------
-    conversions = 0
+    conversions = self.productInfo[product].amount
     
     #Compare the lowest sell/ask price of our own market and the import price of southern market
-    lowest_ask_price #lowest_sell_order
-    if (import_price<lowest_ask_price) and (highest_ask_price<predicted_price):
-        #we decide to import from southern market
-        quantity_import=quantity_buy_orders
-        conversions=+quantity_import #quantity our market want to buy in this iteration
-        num_stored_orchids=quantity_import
+    # lowest_ask_price #lowest_sell_order
+    # if (import_price<lowest_ask_price) and (highest_ask_price<predicted_price):
+    #     #we decide to import from southern market
+    #     quantity_import=quantity_buy_orders
+    #     conversions=+quantity_import #quantity our market want to buy in this iteration
+    #     # =quantity_import
 
-    #Lowest sell price of our own market
-    highest_bid_price #highest_buy_order
-    if (export_revenue>highest_bid_price) and (predicted_price<lowest_bid_price):
-        #we decide to sell from southern market
-        quantity_export=quantity_sell_orders
-        conversions=-quantity_export #quantity our market want to sell in this iteration
-        num_stored_orchids=-quantity_export
+    # #Lowest sell price of our own market
+    # highest_bid_price #highest_buy_order
+    # if (export_revenue>highest_bid_price) and (predicted_price<lowest_bid_price):
+    #     #we decide to sell from southern market
+    #     quantity_export=quantity_sell_orders
+    #     conversions=-quantity_export #quantity our market want to sell in this iteration
+    #     self.num_stored_orchids=-quantity_export
     
     #if the number of orchids we hold is too great we should also export to the southern market
     #DO IT LATER
   
     return conversions
 
+  highestBuySpread = 0
+  lowestBuySpread = -1
+  
+  highestSellSpread = 0
+  lowestSellSpread = -1
+
+  def DoGIFT_BASKETTrading(self, state: TradingState):
+    print("= GIFT_BASKET =")
+    lowestAskPrices: Dict[str, int] = {"GIFT_BASKET": -1, "STRAWBERRIES": -1, "CHOCOLATE": -1, "ROSES": -1}
+    highestBidPrices: Dict[str, int] = {"GIFT_BASKET": 0, "STRAWBERRIES": 0, "CHOCOLATE": 0, "ROSES": 0}
+    baskets = "GIFT_BASKET"
+    strawberries = "STRAWBERRIES"
+    chocolate = "CHOCOLATE"
+    roses = "ROSES"
+
+    # A list of any orders made
+    orders: Dict[str, List[Order]] = {baskets: [], chocolate: [], strawberries: [], roses: []}
+
+
+    # ------------------------ BUYING ------------------------
+    for product in lowestAskPrices:
+      orderDepth: OrderDepth = state.order_depths[product]
+      # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+      for sellOrder in orderDepth.sell_orders: #goes over the key of the dictionary
+        
+        # Gets the price and size of the order
+        askPrice = sellOrder #key
+        # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+        if lowestAskPrices[product] == -1 or lowestAskPrices[product] > askPrice:
+          lowestAskPrices[product] = askPrice
+
+    # If spread is: positive, then baskets are more expensive to buy compared to its components
+    #               negative, then baskets are cheaper to buy compared to its components
+    buySpread = lowestAskPrices[baskets] - (4 * lowestAskPrices[chocolate] + 6 * lowestAskPrices[strawberries] + lowestAskPrices[roses])
+
+    if buySpread > self.highestBuySpread:
+      self.highestBuySpread = buySpread
+    if buySpread < self.lowestBuySpread or self.lowestBuySpread == -1:
+      self.lowestBuySpread = buySpread
+
+    if buySpread >= 400: # buy components
+        # Prints how many were were worth buying, and at what value
+        print("\tBUY COMPONENTS:", chocolate, lowestAskPrices[chocolate], strawberries, lowestAskPrices[strawberries], roses, lowestAskPrices[roses])
+
+        # Appends the buy to the orders list
+        orders[chocolate].append(Order(chocolate, lowestAskPrices[chocolate], 4))
+        orders[strawberries].append(Order(strawberries, lowestAskPrices[strawberries], 6))
+        orders[roses].append(Order(roses, lowestAskPrices[roses], 1))
+
+    if buySpread < 400: # buy basket
+        # Prints how many were were worth buying, and at what value
+        print("\tBUY BASKET:", baskets, lowestAskPrices[baskets])
+
+        # Appends the buy to the orders list
+        orders[baskets].append(Order(baskets, lowestAskPrices[baskets], 1))
+
+
+    # ------------------------ SELLING ------------------------
+    for product in highestBidPrices:
+      orderDepth: OrderDepth = state.order_depths[product]
+      # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+      for buyOrder in orderDepth.buy_orders: #goes over the key of the dictionary
+        
+        # Gets the price and size of the order
+        bidPrice = buyOrder #key
+        # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+        if highestBidPrices[product] < bidPrice:
+          highestBidPrices[product] = bidPrice
+
+    # If spread is: positive, then baskets are selling for MORE compared to its components
+    #               negative, then baskets are selling for LESS compared to its components
+    sellSpread = highestBidPrices[baskets] - (4 * highestBidPrices[chocolate] + 6 * highestBidPrices[strawberries] + highestBidPrices[roses])
+
+    if sellSpread > self.highestSellSpread:
+      self.highestSellSpread = sellSpread
+    if sellSpread < self.lowestSellSpread or self.lowestSellSpread == -1:
+      self.lowestSellSpread = sellSpread
+
+    if sellSpread <= 400: # buy components
+        # Prints how many were were worth buying, and at what value
+        print("\tSELL COMPONENTS:", chocolate, highestBidPrices[chocolate], strawberries, highestBidPrices[strawberries], roses, highestBidPrices[roses])
+
+        # Appends the buy to the orders list
+        orders[chocolate].append(Order(chocolate, highestBidPrices[chocolate], -4))
+        orders[strawberries].append(Order(strawberries, highestBidPrices[strawberries], -6))
+        orders[roses].append(Order(roses, highestBidPrices[roses], -1))
+
+    if sellSpread > 400: # buy basket
+        # Prints how many were were worth buying, and at what value
+        print("\tSELL BASKET:", baskets, highestBidPrices[baskets])
+
+        # Appends the buy to the orders list
+        orders[baskets].append(Order(baskets, highestBidPrices[baskets], -1))
+
+    # print("SPREADS:", buySpread, self.highestBuySpread, self.lowestBuySpread, sellSpread, self.highestSellSpread, self.lowestSellSpread)
+
+    # Adds the order to the results dictionary
+    for product in orders:
+      self.result[product] = orders[product]
 
 
   # This function checks all the market trades from the previous iteration, 
@@ -399,3 +502,15 @@ class Trader:
 
     ORCHIDS = ProductInfo(100)
     self.productInfo["ORCHIDS"] = ORCHIDS
+
+    CHOCOLATE = ProductInfo(250)
+    self.productInfo["CHOCOLATE"] = CHOCOLATE
+
+    STRAWBERRIES = ProductInfo(350)
+    self.productInfo["STRAWBERRIES"] = STRAWBERRIES
+
+    ROSES = ProductInfo(60)
+    self.productInfo["ROSES"] = ROSES
+
+    GIFT_BASKET = ProductInfo(60)
+    self.productInfo["GIFT_BASKET"] = GIFT_BASKET
