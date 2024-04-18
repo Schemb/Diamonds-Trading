@@ -1,30 +1,22 @@
 from typing import Dict, List
 from datamodel import Listing, OrderDepth, Trade, TradingState, ConversionObservation,  Observation, Order
-#import collections #ordered dict
-#from collections import defaultdict #defaultdict(def_value)
 import math 
-#import copy #deep copy
 import numpy as np
 
-#empty_dict = {'AMETHYSTS' : 0, 'STARFRUIT' : 0}
-
-#def def_value():
-    #return copy.deepcopy(empty_dict)
 
 class Trader:
-    #position = copy.deepcopy(empty_dict)
-    #volume_traded = copy.deepcopy(empty_dict)
-    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0}
-    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0}
-    POSITION_LIMIT = {'AMETHYSTS' : 20, 'STARFRUIT' : 20}
+
+    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 }
+    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 }
+    POSITION_LIMIT = {'AMETHYSTS': 20, 'STARFRUIT': 20, "ORCHIDS":100, "STRAWBERRIES":350,"ROSES":60,"CHOCOLATE":250,"GIFT_BASKET":60 }
 
     #person_position = defaultdict(def_value)
     #person_actvalof_position = defaultdict(def_value)
-    person_position = {'AMETHYSTS' : 0, 'STARFRUIT' : 0} #no need
-    person_actvalof_position = {'AMETHYSTS' : 0, 'STARFRUIT' : 0} #no need
+    #person_position = {'AMETHYSTS' : 0, 'STARFRUIT' : 0} #no need
+    #person_actvalof_position = {'AMETHYSTS' : 0, 'STARFRUIT' : 0} #no need
     
     #cpnl = defaultdict(lambda : 0) #meaning later if new products are added the value will be automatically 0. but we just put all products and initialise to be 0
-    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0}
+    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0}
 
     starfruit_cache = []
     starfruit_dim = 4
@@ -57,11 +49,10 @@ class Trader:
         and outputs a list of orders to be sent
         """
         # Initialize the method output dict as an empty dict
-        result = {'AMETHYSTS' : [], 'STARFRUIT' : []}
+        result = {'AMETHYSTS' : [], 'STARFRUIT' : [], "ORCHIDS": [], "STRAWBERRIES": [],"ROSES":[],"CHOCOLATE":[],"GIFT_BASKET":[] }
 
         for key, val in self.position.items():
             print(f'{key} position: {val}')
-
 
         timestamp = state.timestamp
 
@@ -95,6 +86,7 @@ class Trader:
 
         self.steps += 1
 
+        """"
         for product in state.market_trades.keys():
             for trade in state.market_trades[product]:
                 if trade.buyer == trade.seller:
@@ -103,7 +95,7 @@ class Trader:
                 self.person_position[trade.seller][product] = -1.5
                 self.person_actvalof_position[trade.buyer][product] += trade.quantity
                 self.person_actvalof_position[trade.seller][product] += -trade.quantity
-
+        """"
         
         for product in ['AMETHYSTS', 'STARFRUIT']:
             order_depth: OrderDepth = state.order_depths[product]
@@ -158,6 +150,15 @@ class Trader:
                     self.person_position[person][val] *= 0
         """
 
+        #redo what Noah has done
+        # Loops through all the order depths for each product (currently "AMETHYSTS" and "STARFRUIT")
+        for product in ["ORCHIDS","GIFT_BASKET"]:
+            if product == "ORCHIDS":
+                orchidConversions = self.DoORCHIDSTrading(state)
+                print(str(orchidConversions))
+            elif product == "GIFT_BASKET":
+                self.DoGIFT_BASKETTrading(state)
+
         print(f"Timestamp {timestamp}, Total PNL ended up being {totpnl}")
         
         # print(f'Will trade {result}')
@@ -165,13 +166,9 @@ class Trader:
 
         traderData = "SAMPLE"
 
-        conversions=0
-        
-        #initialise random Orders for other products
-        for product in ["GIFT_BASKET","CHOCOLATE","STRAWBERRIES","ROSES","ORCHIDS"]:
-            result[product]=[Order(product,10,0), Order(product,11,0) ] #a list of Order objects
+        #orchidConversions=0
 
-        return result, conversions, traderData        
+        return result, orchidConversions, traderData        
     
     def compute_orders(self, product, order_depth, acc_bid, acc_ask):
 
@@ -406,3 +403,167 @@ class Trader:
                 best_val = ask #when ask is iterated to the last key which is the smallest ask offer/sell price to us, that's also the value of best_val
 
         return tot_vol, best_val
+    
+    def DoORCHIDSTrading(self, state: TradingState):
+        print("= ORCHIDS =")
+        product = "ORCHIDS"
+
+        orchidInfo = state.observations.conversionObservations[product]
+
+        sunlight =      orchidInfo.sunlight
+        humidity =      orchidInfo.humidity
+        southAskPrice = orchidInfo.askPrice
+        southBidPrice = orchidInfo.bidPrice
+        exportFees =    orchidInfo.exportTariff
+        importFees =    orchidInfo.importTariff
+        transportFees = orchidInfo.transportFees
+
+        production_from_humidity = 100
+        if humidity < 60:
+            production_from_humidity = (2 / 5) * humidity + 76
+        if humidity > 80:
+            production_from_humidity = - (2 / 5) * humidity + 132
+
+        #predicted_price trading within our own market
+        predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity + 500
+        print("The predicted price for Orchids is:", predicted_price)
+
+        #price when we buy/import from southern archepelago
+        import_price=southAskPrice+importFees+transportFees
+
+        #price when we sell/export to the southern archepelago
+        export_revenue=southBidPrice-exportFees-transportFees
+
+        # ------------= Local Market Trades =------------
+        acc_bid_orchids=predicted_price-2
+        acc_ask_orchids=predicted_price+2
+        orchid_limit=100
+
+        order_depth: OrderDepth = state.order_depths["ORCHIDS"]
+        self.compute_orders_regression("ORCHIDS", order_depth, acc_bid_orchids, acc_ask_orchids, orchid_limit)
+        
+        #----------=Determine whether we should buy or sell=-----------
+        conversions = self.productInfo[product].amount
+    
+    #Compare the lowest sell/ask price of our own market and the import price of southern market
+    # lowest_ask_price #lowest_sell_order
+    # if (import_price<lowest_ask_price) and (highest_ask_price<predicted_price):
+    #     #we decide to import from southern market
+    #     quantity_import=quantity_buy_orders
+    #     conversions=+quantity_import #quantity our market want to buy in this iteration
+    #     # =quantity_import
+
+    # #Lowest sell price of our own market
+    # highest_bid_price #highest_buy_order
+    # if (export_revenue>highest_bid_price) and (predicted_price<lowest_bid_price):
+    #     #we decide to sell from southern market
+    #     quantity_export=quantity_sell_orders
+    #     conversions=-quantity_export #quantity our market want to sell in this iteration
+    #     self.num_stored_orchids=-quantity_export
+    
+    #if the number of orchids we hold is too great we should also export to the southern market
+    #DO IT LATER
+  
+        return conversions
+
+    highestBuySpread = 0
+    lowestBuySpread = -1
+  
+    highestSellSpread = 0
+    lowestSellSpread = -1
+
+    def DoGIFT_BASKETTrading(self, state: TradingState):
+        print("= GIFT_BASKET =")
+        lowestAskPrices: Dict[str, int] = {"GIFT_BASKET": -1, "STRAWBERRIES": -1, "CHOCOLATE": -1, "ROSES": -1}
+        highestBidPrices: Dict[str, int] = {"GIFT_BASKET": 0, "STRAWBERRIES": 0, "CHOCOLATE": 0, "ROSES": 0}
+        baskets = "GIFT_BASKET"
+        strawberries = "STRAWBERRIES"
+        chocolate = "CHOCOLATE"
+        roses = "ROSES"
+
+        # A list of any orders made
+        orders: Dict[str, List[Order]] = {baskets: [], chocolate: [], strawberries: [], roses: []}
+
+
+        # ------------------------ BUYING ------------------------
+        for product in lowestAskPrices:
+            orderDepth: OrderDepth = state.order_depths[product]
+        # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+        for sellOrder in orderDepth.sell_orders: #goes over the key of the dictionary
+            
+            # Gets the price and size of the order
+            askPrice = sellOrder #key
+            # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+            if lowestAskPrices[product] == -1 or lowestAskPrices[product] > askPrice:
+                lowestAskPrices[product] = askPrice
+
+        # If spread is: positive, then baskets are more expensive to buy compared to its components
+        #               negative, then baskets are cheaper to buy compared to its components
+        buySpread = lowestAskPrices[baskets] - (4 * lowestAskPrices[chocolate] + 6 * lowestAskPrices[strawberries] + lowestAskPrices[roses])
+
+        if buySpread > self.highestBuySpread:
+            self.highestBuySpread = buySpread
+        if buySpread < self.lowestBuySpread or self.lowestBuySpread == -1:
+            self.lowestBuySpread = buySpread
+
+        if buySpread >= 400: # buy components
+            # Prints how many were were worth buying, and at what value
+            print("\tBUY COMPONENTS:", chocolate, lowestAskPrices[chocolate], strawberries, lowestAskPrices[strawberries], roses, lowestAskPrices[roses])
+
+            # Appends the buy to the orders list
+            orders[chocolate].append(Order(chocolate, lowestAskPrices[chocolate], 4))
+            orders[strawberries].append(Order(strawberries, lowestAskPrices[strawberries], 6))
+            orders[roses].append(Order(roses, lowestAskPrices[roses], 1))
+
+        if buySpread < 400: # buy basket
+            # Prints how many were were worth buying, and at what value
+            print("\tBUY BASKET:", baskets, lowestAskPrices[baskets])
+
+            # Appends the buy to the orders list
+            orders[baskets].append(Order(baskets, lowestAskPrices[baskets], 1))
+
+
+        # ------------------------ SELLING ------------------------
+        for product in highestBidPrices:
+            orderDepth: OrderDepth = state.order_depths[product]
+        # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+        for buyOrder in orderDepth.buy_orders: #goes over the key of the dictionary
+            
+            # Gets the price and size of the order
+            bidPrice = buyOrder #key
+            # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+            if highestBidPrices[product] < bidPrice:
+                highestBidPrices[product] = bidPrice
+
+        # If spread is: positive, then baskets are selling for MORE compared to its components
+        #               negative, then baskets are selling for LESS compared to its components
+        sellSpread = highestBidPrices[baskets] - (4 * highestBidPrices[chocolate] + 6 * highestBidPrices[strawberries] + highestBidPrices[roses])
+
+        if sellSpread > self.highestSellSpread:
+            self.highestSellSpread = sellSpread
+        if sellSpread < self.lowestSellSpread or self.lowestSellSpread == -1:
+            self.lowestSellSpread = sellSpread
+
+        if sellSpread <= 400: # buy components
+            # Prints how many were were worth buying, and at what value
+            print("\tSELL COMPONENTS:", chocolate, highestBidPrices[chocolate], strawberries, highestBidPrices[strawberries], roses, highestBidPrices[roses])
+
+            # Appends the buy to the orders list
+            orders[chocolate].append(Order(chocolate, highestBidPrices[chocolate], -4))
+            orders[strawberries].append(Order(strawberries, highestBidPrices[strawberries], -6))
+            orders[roses].append(Order(roses, highestBidPrices[roses], -1))
+
+        if sellSpread > 400: # buy basket
+            # Prints how many were were worth buying, and at what value
+            print("\tSELL BASKET:", baskets, highestBidPrices[baskets])
+
+            # Appends the buy to the orders list
+            orders[baskets].append(Order(baskets, highestBidPrices[baskets], -1))
+
+        # print("SPREADS:", buySpread, self.highestBuySpread, self.lowestBuySpread, sellSpread, self.highestSellSpread, self.lowestSellSpread)
+
+        # Adds the order to the results dictionary
+        for product in orders:
+            self.result[product] = orders[product]
