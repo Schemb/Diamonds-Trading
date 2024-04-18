@@ -65,6 +65,7 @@ class Trader:
 
         timestamp = state.timestamp
 
+        #if len(self.starfruit_cache) is already equal to 4 we have to pop the first elementn to append the new one
         if len(self.starfruit_cache) == self.starfruit_dim:
             self.starfruit_cache.pop(0) #pop(0) modifies the list but also returns the element that is removed from the list
 
@@ -74,15 +75,15 @@ class Trader:
         #bb is is best bid/ best buy offer: the highest people want to buy from us
 
         self.starfruit_cache.append((bs_starfruit+bb_starfruit)/2)
+        
+        #from here onwards, starfruit_cache either have 1 element, 2 elements, 3 elements, or 4 elements
 
-        INF = 1e9
-    
-        starfruit_lb = -INF
-        starfruit_ub = INF
+        starfruit_lb = self.calc_next_price_starfruit()-1
+        starfruit_ub = self.calc_next_price_starfruit()+1
+        
+        print("starfruit_cache is",self.starfruit_cache)
+        print("calc_next_price_starfruit() ",self.calc_next_price_starfruit())
 
-        if len(self.starfruit_cache) == self.starfruit_dim:
-            starfruit_lb = self.calc_next_price_starfruit()-1
-            starfruit_ub = self.calc_next_price_starfruit()+1
 
         AMETHYSTS_lb = 10000
         AMETHYSTS_ub = 10000
@@ -326,18 +327,50 @@ class Trader:
         return orders
 
     def calc_next_price_starfruit(self):
+        """
+        starfruit_cache = []
+        starfruit_dim = 4
+
+         if len(self.starfruit_cache) == self.starfruit_dim:
+            self.starfruit_cache.pop(0) #pop(0) modifies the list but also returns the element that is removed from the list
+
+        _, bs_starfruit = self.values_extract(state.order_depths['STARFRUIT'].sell_orders,buy=0)
+        #bs is best sell of starfruit, meaning best ask/ best sell offer/ the lowest that people sell to us
+        _, bb_starfruit = self.values_extract(state.order_depths['STARFRUIT'].buy_orders, buy=1)
+        #bb is is best bid/ best buy offer: the highest people want to buy from us
+
+        self.starfruit_cache.append((bs_starfruit+bb_starfruit)/2)
+
+        INF = 1e9
+    
+        starfruit_lb = -INF
+        starfruit_ub = INF
+
+        if len(self.starfruit_cache) == self.starfruit_dim:
+            starfruit_lb = self.calc_next_price_starfruit()-1
+            starfruit_ub = self.calc_next_price_starfruit()+1
+        """
+
         #1 Day: from 0 to 1M time stamp, 
-        # bananas cache stores price from 1 day ago, current day resp
         #but I see from your code, stanford, that the dimension of the bananas cache is 4, meaning the list stores 4 values. so you predict the value of this iteration based on the values of the last 4 iterations?
         # by price, here we mean mid price; which is the average price 
 
         coef = [0.189599, 0.211908, 0.259882, 0.338144]
         intercept = 2.35578
 
-        nxt_price = intercept
-        for i, val in enumerate(self.starfruit_cache):
-            nxt_price += val * coef[i]
+        nxt_price = 0
+        nxt_price += intercept
 
+        if len(self.starfruit_cache)==self.starfruit_dim:
+            for i, val in enumerate(self.starfruit_cache):
+                nxt_price += val * coef[i]
+        else:#for the case in the beginning where en(self.starfruit_cache)<self.starfruit_dim
+            for i, val in enumerate(reversed(self.starfruit_cache)): 
+                #val goes in the reverse order of starfruit_cache list but but i. i still goes from 0
+                #adjust index: index of coeff should go from 3 to 2 to 1
+                #when i=0, we want index 3 of coef. when i=1, we want index 2. => use index 3-i
+                nxt_price += val * coef[3-i]
+                
         return int(round(nxt_price))
 
     #osell = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
