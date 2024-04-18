@@ -130,10 +130,14 @@ class Trader:
         totpnl = 0
 
         for product in state.order_depths.keys():
+            try:
+              self.position[product]
+            except:
+                continue  
             settled_pnl = 0
             best_sell = min(state.order_depths[product].sell_orders.keys())
             best_buy = max(state.order_depths[product].buy_orders.keys())
-
+            
             if self.position[product] < 0:
                 settled_pnl += self.position[product] * best_buy
             else:
