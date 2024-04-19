@@ -145,7 +145,7 @@ class Trader:
         self.steps += 1
 
         #Compute orders
-        for product in ['AMETHYSTS', 'STARFRUIT', "STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET"]:
+        for product in ['AMETHYSTS', 'STARFRUIT',"ROSES","GIFT_BASKET","STRAWBERRIES","CHOCOLATE"]: 
             order_depth: OrderDepth = state.order_depths[product]
             orders = self.compute_orders(product, order_depth, acc_bid[product], acc_ask[product])
             result[product] += orders #[]+[ , ] -> becomes a new list
@@ -184,7 +184,8 @@ class Trader:
         #End computation of cpnl of each product-------------------------------------------------------------------------------------
 
         #print(f"Timestamp {timestamp}, Total PNL ended up being {totpnl}")
-        print(f"Timestamp {timestamp}, Will trade {result}")
+        print(f"Timestamp {timestamp}, Choco trade {result["CHOCOLATE"]}")
+        print(f"Timestamp {timestamp}, Straw trade {result["STRAWBERRIES"]}")
         print("End transmission")
 
         traderData = "SAMPLE"
