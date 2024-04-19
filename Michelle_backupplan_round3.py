@@ -200,95 +200,28 @@ class Trader:
             return self.compute_orders_AMETHYSTS(product, order_depth, acc_bid, acc_ask)
         if product in ["STARFRUIT","STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET"]:
             return self.compute_orders_regression(product, order_depth, acc_bid, acc_ask, self.POSITION_LIMIT[product])
+        if product == "GIFT_BASKET":
+            return 
 
     def compute_orders_AMETHYSTS(self, product, order_depth, acc_bid, acc_ask): #this is how to market make and market take around 10k considering the no. of positions
-        orders: list[Order] = [] #create a new variable "orders", specify the data type which is a list of objects belonging to the "Order" class, and this funtion returns this "orders" variable.
-
-        #osell = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
-        #obuy = collections.OrderedDict(sorted(order_depth.buy_orders.items(), reverse=True))
         
-        #each OrderDepth object for 1 producthas two data members, self.buy_orders. they are outstanding buy and sell offers of this iteration.
-        #eg. buy_orders like {9: 5, 10: 4} and eg. sell_orders {12: -3, 11: -2}
-        #{9:5, 10:4}.items() -> Out: dict_items( [ (9, 5), (10, 4) ] )
-        #The sorted() function returns a sorted list of the specified iterable object.
-        #You can specify ascending or descending order. Strings are sorted alphabetically, and numbers are sorted numerically.
-        #sorted(): reverse	Optional. A Boolean. False will sort ascending, True will sort descending. Default is False
+        print("= AMETHYSTS =")
+        product = "AMETHYSTS"
 
+        # A list of any orders made
+        orders: List[Order] = []
 
-
-        sell_vol, best_sell_pr = self.values_extract(order_depth.sell_orders,buy=0)
-        buy_vol, best_buy_pr = self.values_extract(order_depth.buy_orders, buy=1)
-
-        osell =sorted(order_depth.sell_orders.items(), reverse=True) #selling price to us in descending order
-        obuy = sorted(order_depth.buy_orders.items(), reverse=False) #buy_price from us in increasing order
-
-        #product='AMETHYSTS' #the value right now
-        #position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0} #this is the starting value of position dictionary
-        cpos = self.position[product] #cpos is the absolute value of the position right now
-
-        mx_with_buy = -1
-
-        #----------------generate sell orders for AMETHYSTS------------------
-
-        for ask, vol in osell:
-            #for amethys acc_bid is 10k, acc_ask is also 10k
-            if (  (ask < acc_bid)   or   ( (self.position[product]<0) and (ask == acc_bid) )  ) and cpos < self.POSITION_LIMIT['AMETHYSTS']:
-                mx_with_buy = max(mx_with_buy, ask)
-                order_for = min(-vol, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
-                cpos += order_for
-                assert(order_for >= 0)
-                orders.append(Order(product, ask, order_for))
-
-        mprice_actual = (best_sell_pr + best_buy_pr)/2
-        mprice_ours = (acc_bid+acc_ask)/2
-
-        undercut_buy = best_buy_pr + 1
-        undercut_sell = best_sell_pr - 1
-
-        bid_pr = min(undercut_buy, acc_bid-1) # we will shift this by 1 to beat this price
-        sell_pr = max(undercut_sell, acc_ask+1)
-
-        if (cpos < self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] < 0):
-            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
-            orders.append(Order(product, min(undercut_buy + 1, acc_bid-1), num))
-            cpos += num
-
-        if (cpos < self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] > 15):
-            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
-            orders.append(Order(product, min(undercut_buy - 1, acc_bid-1), num))
-            cpos += num
-
-        if cpos < self.POSITION_LIMIT['AMETHYSTS']:
-            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
-            orders.append(Order(product, bid_pr, num))
-            cpos += num
+        maxBuy = 20 - self.productInfo[product].amount
+        maxSell = 20 + self.productInfo[product].amount
         
-        cpos = self.position[product]
+        # Appends the buy to the orders list
+        orders.append(Order(product, 9998, maxBuy))
 
-        #----------------generate buy orders for AMETHYSTS------------------
+        # Appends the sell to the orders list
+        orders.append(Order(product, 10002, -maxSell))
 
-        for bid, vol in obuy:
-            if ((bid > acc_ask) or ((self.position[product]>0) and (bid == acc_ask))) and cpos > -self.POSITION_LIMIT['AMETHYSTS']:
-                order_for = max(-vol, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
-                # order_for is a negative number denoting how much we will sell
-                cpos += order_for
-                assert(order_for <= 0)
-                orders.append(Order(product, bid, order_for))
-
-        if (cpos > -self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] > 0):
-            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
-            orders.append(Order(product, max(undercut_sell-1, acc_ask+1), num))
-            cpos += num
-
-        if (cpos > -self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] < -15):
-            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
-            orders.append(Order(product, max(undercut_sell+1, acc_ask+1), num))
-            cpos += num
-
-        if cpos > -self.POSITION_LIMIT['AMETHYSTS']:
-            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
-            orders.append(Order(product, sell_pr, num))
-            cpos += num
+        # Adds the order to the results dictionary
+        # self.result[product] = orders
 
         return orders
     
@@ -448,65 +381,95 @@ class Trader:
                 best_val = ask #when ask is iterated to the last key which is the smallest ask offer/sell price to us, that's also the value of best_val
 
         return tot_vol, best_val
-    
-    def DoORCHIDSTrading(self, state: TradingState):
-        print("= ORCHIDS =")
-        product = "ORCHIDS"
 
-        orchidInfo = state.observations.conversionObservations[product]
-
-        sunlight =      orchidInfo.sunlight
-        humidity =      orchidInfo.humidity
-        southAskPrice = orchidInfo.askPrice
-        southBidPrice = orchidInfo.bidPrice
-        exportFees =    orchidInfo.exportTariff
-        importFees =    orchidInfo.importTariff
-        transportFees = orchidInfo.transportFees
-
-        production_from_humidity = 100
-        if humidity < 60:
-            production_from_humidity = (2 / 5) * humidity + 76
-        if humidity > 80:
-            production_from_humidity = - (2 / 5) * humidity + 132
-
-        #predicted_price trading within our own market
-        predicted_price = 1998.39 + 0.0524167 * sunlight - 10.5565 * production_from_humidity + 500
-        print("The predicted price for Orchids is:", predicted_price)
-
-        #price when we buy/import from southern archepelago
-        import_price=southAskPrice+importFees+transportFees
-
-        #price when we sell/export to the southern archepelago
-        export_revenue=southBidPrice-exportFees-transportFees
-
-        # ------------= Local Market Trades =------------
-        acc_bid_orchids=predicted_price-2
-        acc_ask_orchids=predicted_price+2
-        orchid_limit=100
-
-        order_depth: OrderDepth = state.order_depths["ORCHIDS"]
-        self.compute_orders_regression("ORCHIDS", order_depth, acc_bid_orchids, acc_ask_orchids, orchid_limit)
-        
-        #----------=Determine whether we should buy or sell=-----------
-        conversions = self.productInfo[product].amount
-    
-    #Compare the lowest sell/ask price of our own market and the import price of southern market
-    # lowest_ask_price #lowest_sell_order
-    # if (import_price<lowest_ask_price) and (highest_ask_price<predicted_price):
-    #     #we decide to import from southern market
-    #     quantity_import=quantity_buy_orders
-    #     conversions=+quantity_import #quantity our market want to buy in this iteration
-    #     # =quantity_import
-
-    # #Lowest sell price of our own market
-    # highest_bid_price #highest_buy_order
-    # if (export_revenue>highest_bid_price) and (predicted_price<lowest_bid_price):
-    #     #we decide to sell from southern market
-    #     quantity_export=quantity_sell_orders
-    #     conversions=-quantity_export #quantity our market want to sell in this iteration
-    #     self.num_stored_orchids=-quantity_export
-    
-    #if the number of orchids we hold is too great we should also export to the southern market
-    #DO IT LATER
+    highestBuySpread = 0
+    lowestBuySpread = -1
   
-        return conversions
+    highestSellSpread = 0
+    lowestSellSpread = -1
+    
+    def DoGIFT_BASKETTrading(self, state: TradingState):
+        print("= GIFT_BASKET =")
+        lowestAskPrices: Dict[str, int] = {"GIFT_BASKET": -1, "STRAWBERRIES": -1, "CHOCOLATE": -1, "ROSES": -1}
+        highestBidPrices: Dict[str, int] = {"GIFT_BASKET": 0, "STRAWBERRIES": 0, "CHOCOLATE": 0, "ROSES": 0}
+        baskets = "GIFT_BASKET"
+        strawberries = "STRAWBERRIES"
+        chocolate = "CHOCOLATE"
+        roses = "ROSES"
+
+        # A list of any orders made
+        orders: Dict[str, List[Order]] = {baskets: [], chocolate: [], strawberries: [], roses: []}
+
+
+        # ------------------------ BUYING ------------------------
+        for product in lowestAskPrices:
+            orderDepth: OrderDepth = state.order_depths[product]
+        # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+        for sellOrder in orderDepth.sell_orders: #goes over the key of the dictionary
+            
+            # Gets the price and size of the order
+            askPrice = sellOrder #key
+            # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+            if lowestAskPrices[product] == -1 or lowestAskPrices[product] > askPrice:
+                lowestAskPrices[product] = askPrice
+
+        # If spread is: positive, then baskets are more expensive to buy compared to its components
+        #               negative, then baskets are cheaper to buy compared to its components
+        buySpread = lowestAskPrices[baskets] - (4 * lowestAskPrices[chocolate] + 6 * lowestAskPrices[strawberries] + lowestAskPrices[roses])
+
+        # if buySpread >= 400: # buy components
+            # Prints how many were were worth buying, and at what value
+            # print("\tBUY COMPONENTS:", chocolate, lowestAskPrices[chocolate], strawberries, lowestAskPrices[strawberries], roses, lowestAskPrices[roses])
+
+            # # Appends the buy to the orders list
+            # orders[chocolate].append(Order(chocolate, lowestAskPrices[chocolate], 4))
+            # orders[strawberries].append(Order(strawberries, lowestAskPrices[strawberries], 6))
+            # orders[roses].append(Order(roses, lowestAskPrices[roses], 1))
+
+        if buySpread < 400: # buy basket
+            # Prints how many were were worth buying, and at what value
+            print("\tBUY BASKET:", baskets, lowestAskPrices[baskets])
+
+            # Appends the buy to the orders list
+            orders[baskets].append(Order(baskets, lowestAskPrices[baskets], 1))
+
+
+        # ------------------------ SELLING ------------------------
+        for product in highestBidPrices:
+            orderDepth: OrderDepth = state.order_depths[product]
+        # Loops through all the sell orders in this iteration of this product, sees if any are worth buying from
+        for buyOrder in orderDepth.buy_orders: #goes over the key of the dictionary
+            
+            # Gets the price and size of the order
+            bidPrice = buyOrder #key
+            # askAmount = -orderDepth.sell_orders[sellOrder] #values
+
+            if highestBidPrices[product] < bidPrice:
+                highestBidPrices[product] = bidPrice
+
+        # If spread is: positive, then baskets are selling for MORE compared to its components
+        #               negative, then baskets are selling for LESS compared to its components
+        sellSpread = highestBidPrices[baskets] - (4 * highestBidPrices[chocolate] + 6 * highestBidPrices[strawberries] + highestBidPrices[roses])
+
+
+        # if sellSpread <= 400: # buy components
+            # Prints how many were were worth buying, and at what value
+            # print("\tSELL COMPONENTS:", chocolate, highestBidPrices[chocolate], strawberries, highestBidPrices[strawberries], roses, highestBidPrices[roses])
+
+            # Appends the buy to the orders list
+            # orders[chocolate].append(Order(chocolate, highestBidPrices[chocolate], -4))
+            # orders[strawberries].append(Order(strawberries, highestBidPrices[strawberries], -6))
+            # orders[roses].append(Order(roses, highestBidPrices[roses], -1))
+
+        if sellSpread > 400: # buy basket
+            # Prints how many were were worth buying, and at what value
+            print("\tSELL BASKET:", baskets, highestBidPrices[baskets])
+
+            # Appends the buy to the orders list
+            orders[baskets].append(Order(baskets, highestBidPrices[baskets], -1))
+
+        # print("SPREADS:", buySpread, self.highestBuySpread, self.lowestBuySpread, sellSpread, self.highestSellSpread, self.lowestSellSpread)
+
+        # Returns the order
+        return orders[product]
