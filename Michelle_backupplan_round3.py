@@ -102,8 +102,8 @@ class Trader:
         self.basket_cache.append(mid_price_choco)
         self.basket_cache.append(mid_price_basket)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        basket_lb = self.calc_next_price_basket()-1 #-6.42
-        basket_ub = self.calc_next_price_basket()+1 #+6.42
+        basket_lb = self.calc_next_price_basket()-6 #-6.42
+        basket_ub = self.calc_next_price_basket()+6 #+6.42
 
         #choco_cache
         self.choco_cache.append(mid_price_basket)
@@ -184,8 +184,8 @@ class Trader:
         #End computation of cpnl of each product-------------------------------------------------------------------------------------
 
         #print(f"Timestamp {timestamp}, Total PNL ended up being {totpnl}")
-        print(f"Timestamp {timestamp}, Choco trade {result["CHOCOLATE"]}")
-        print(f"Timestamp {timestamp}, Straw trade {result["STRAWBERRIES"]}")
+        print(f"Timestamp {timestamp}, in this iteration we predict the next price will be{self.calc_next_price_choco()}; Choco trade {result["CHOCOLATE"]}")
+        print(f"Timestamp {timestamp}, in this iteration we predict the next price will be{self.calc_next_price_straw()}; Straw trade {result["STRAWBERRIES"]}")
         print("End transmission")
 
         traderData = "SAMPLE"
