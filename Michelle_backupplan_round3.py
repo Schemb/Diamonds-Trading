@@ -66,8 +66,8 @@ class Trader:
         _, bb_starfruit = self.values_extract(state.order_depths['STARFRUIT'].buy_orders, buy=1)
         self.starfruit_cache.append((bs_starfruit+bb_starfruit)/2)
         #from here onwards, starfruit_cache either have 1 element, 2 elements, 3 elements, or 4 elements
-        starfruit_lb = self.calc_next_price_starfruit()-1.05
-        starfruit_ub = self.calc_next_price_starfruit()+1.05
+        starfruit_lb = self.calc_next_price_starfruit()-1
+        starfruit_ub = self.calc_next_price_starfruit()+1
 
         #Calculate lb and ub of GIFT_BASKET, and create GIFT_BASKET cache
 
