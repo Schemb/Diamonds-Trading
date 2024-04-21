@@ -4,13 +4,14 @@ import math
 import numpy as np
 
 
-class Trader:
 
-    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 }
-    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 }
+class Trader: #each new object of trader is created for one round eg. one day, 10000 iterations, timestamp from 0 to 1M
+
+    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0, "ROSES":0, "CHOCOLATE":0, "GIFT_BASKET":0 }
+    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 } #total_volume traded
     POSITION_LIMIT = {'AMETHYSTS': 20, 'STARFRUIT': 20, "ORCHIDS":100, "STRAWBERRIES":350,"ROSES":60,"CHOCOLATE":250,"GIFT_BASKET":60 }
 
-    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0}
+    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0} #totals pnl of each product after each round
 
     starfruit_cache = []
     starfruit_dim = 4
@@ -30,34 +31,17 @@ class Trader:
 
     steps = 0
     
-    halflife_diff = 5
-    alpha_diff = 1 - np.exp(-np.log(2)/halflife_diff)
-
-    halflife_price = 5
-    alpha_price = 1 - np.exp(-np.log(2)/halflife_price)
-
-    halflife_price_dip = 20
-    alpha_price_dip = 1 - np.exp(-np.log(2)/halflife_price_dip)
-
-    INF = int(1e9)
-    begin_diff_dip = -INF
-    begin_diff_bag = -INF
-    begin_bag_price = -INF
-    begin_dip_price = -INF
-
-    std = 25
-    basket_std = 117
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         
         # Initialize the method output dict as an empty dict
         result = {'AMETHYSTS' : [], 'STARFRUIT' : [], "ORCHIDS": [], "STRAWBERRIES": [],"ROSES":[],"CHOCOLATE":[],"GIFT_BASKET":[] }
 
-        #print out position
-        for key, val in self.position.items():
-            print(f'{key} position: {val}')
-
         timestamp = state.timestamp
+
+        #Update the current position of each product from the position in the TradingState object
+        for key, val in state.position.items():
+            self.position[key] = val
 
         #Calculate lb and ub of STARFRUIT, and create STARFRUIT cache
         if len(self.starfruit_cache) == self.starfruit_dim:
@@ -70,7 +54,6 @@ class Trader:
         starfruit_ub = self.calc_next_price_starfruit()+1
 
         #Calculate lb and ub of GIFT_BASKET, and create GIFT_BASKET cache
-
         if len(self.basket_cache) == self.basket_dim:
             del self.basket_cache[:4] #remove the first four elements of the list
         if len(self.choco_cache) == self.choco_dim:
@@ -144,49 +127,32 @@ class Trader:
 
         self.steps += 1
 
-        #Compute orders
-        for product in ['AMETHYSTS', 'STARFRUIT',"ROSES","GIFT_BASKET","STRAWBERRIES","CHOCOLATE"]: 
+        #Compute orders-------------------------------------------------------------------------------------------------
+        for product in ['AMETHYSTS', 'STARFRUIT',"ROSES","STRAWBERRIES","CHOCOLATE","GIFT_BASKET"]: 
             order_depth: OrderDepth = state.order_depths[product]
             orders = self.compute_orders(product, order_depth, acc_bid[product], acc_ask[product])
             result[product] += orders #[]+[ , ] -> becomes a new list
 
+            product, order_depth, acc_bid, acc_ask, self.POSITION_LIMIT[product]
+
         #Compute cpnl of each product-------------------------------------------------------------------------------------
-        """""
+       
         for product in state.own_trades.keys():
-            for trade in state.own_trades[product]:
+            for trade in state.own_trades[product]: #state.own_trades[product] - a list of Trade objects for each product
                 if trade.timestamp != state.timestamp-100:
-                    continue
-                # print(f'We are trading {product}, {trade.buyer}, {trade.seller}, {trade.quantity}, {trade.price}')
-                self.volume_traded[product] += abs(trade.quantity)
+                    continue 
+                self.volume_traded[product] += abs(trade.quantity) #actually no need because trade.quantity is always the absolute value in Trade objects
                 if trade.buyer == "SUBMISSION":
-                    self.cpnl[product] -= trade.quantity * trade.price
+                    self.cpnl[product] -= trade.quantity * trade.price #the amount we pay for each trade
                 else:
-                    self.cpnl[product] += trade.quantity * trade.price
+                    self.cpnl[product] += trade.quantity * trade.price #the amount we receive for each trade
 
-        totpnl = 0
-
-        for product in state.order_depths.keys():
-            try:
-              self.position[product]
-            except:
-                continue  
-            settled_pnl = 0
-            best_sell = min(state.order_depths[product].sell_orders.keys())
-            best_buy = max(state.order_depths[product].buy_orders.keys())
-            
-            if self.position[product] < 0:
-                settled_pnl += self.position[product] * best_buy
-            else:
-                settled_pnl += self.position[product] * best_sell
-            totpnl += settled_pnl + self.cpnl[product]
-            print(f"For product {product}, {settled_pnl + self.cpnl[product]}, {(settled_pnl+self.cpnl[product])/(self.volume_traded[product]+1e-20)}")
-        """""
         #End computation of cpnl of each product-------------------------------------------------------------------------------------
-
-        #print(f"Timestamp {timestamp}, Total PNL ended up being {totpnl}")
-        print(f"Timestamp {timestamp}, in this iteration we predict the next price will be{self.calc_next_price_choco()}; Choco trade {result["CHOCOLATE"]}")
-        print(f"Timestamp {timestamp}, in this iteration we predict the next price will be{self.calc_next_price_straw()}; Straw trade {result["STRAWBERRIES"]}")
-        print("End transmission")
+        
+        print(f"Timestamp {timestamp}, PnL of each product is: ")
+        for product in state.order_depths.keys():
+            print(f"Product {product} has PnL {self.cpnl[product]}")
+        print(f"End timestamp {timestamp} \n ")
 
         traderData = "SAMPLE"
 
@@ -200,28 +166,84 @@ class Trader:
             return self.compute_orders_AMETHYSTS(product, order_depth, acc_bid, acc_ask)
         if product in ["STARFRUIT","STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET"]:
             return self.compute_orders_regression(product, order_depth, acc_bid, acc_ask, self.POSITION_LIMIT[product])
-        if product == "GIFT_BASKET":
-            return 
 
     def compute_orders_AMETHYSTS(self, product, order_depth, acc_bid, acc_ask): #this is how to market make and market take around 10k considering the no. of positions
+        #acc_bid: low bound; acc_ask: up bound
+        #position= {'AMETHYSTS' : 0}
+        #POSITION_LIMIT = {'AMETHYSTS': 20}
+        orders: list[Order] = [] 
+
+        sell_vol, best_sell_pr = self.values_extract(order_depth.sell_orders,buy=0)
+        buy_vol, best_buy_pr = self.values_extract(order_depth.buy_orders, buy=1)
+
+        osell =sorted(order_depth.sell_orders.items(), reverse=True) #order_depth dictionary {price: quantity}  in descending order
+        obuy = sorted(order_depth.buy_orders.items(), reverse=False) # in increasing order
+
+        #product='AMETHYSTS' #the value right now
+        cpos = self.position[product] #cpos is an integer, the value of the position right now
+
+        mx_with_buy = -1 #the highest ask/ sell price in osell
+
+        #----------------generate buy orders for AMETHYSTS------------------
+
+        for ask, vol in osell:
+            if (  (ask < acc_bid)   or   ( (ask == acc_bid) and (self.position[product]<0) )  ) and cpos < self.POSITION_LIMIT['AMETHYSTS']:
+                mx_with_buy = max(mx_with_buy, ask)
+                order_for = min(-vol, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
+                cpos += order_for
+                assert(order_for >= 0)
+                orders.append(Order(product, ask, order_for))
+
+        mprice_actual = (best_sell_pr + best_buy_pr)/2 #true mid price from the order depth of this iteration
+        mprice_ours = (acc_bid+acc_ask)/2 #the calculated_next_price of the next iteration we predict in this iteration
+
+        undercut_buy = best_buy_pr + 1 #highest buy +1
+        undercut_sell = best_sell_pr - 1 #lowest sell -1
+
+        bid_pr = min(undercut_buy, acc_bid-1) # we will shift this by 1 to beat this price
+        sell_pr = max(undercut_sell, acc_ask+1)
+
+        if (cpos < self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] < 0):
+            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
+            orders.append(Order(product, min(undercut_buy + 1, acc_bid-1), num))
+            cpos += num
+
+        if (cpos < self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] > 15):
+            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
+            orders.append(Order(product, min(undercut_buy - 1, acc_bid-1), num))
+            cpos += num
+
+        if cpos < self.POSITION_LIMIT['AMETHYSTS']:
+            num = min(40, self.POSITION_LIMIT['AMETHYSTS'] - cpos)
+            orders.append(Order(product, bid_pr, num))
+            cpos += num
         
-        print("= AMETHYSTS =")
-        product = "AMETHYSTS"
+        cpos = self.position[product]
 
-        # A list of any orders made
-        orders: List[Order] = []
+        #----------------generate sell orders for AMETHYSTS------------------
 
-        maxBuy = 20 - self.productInfo[product].amount
-        maxSell = 20 + self.productInfo[product].amount
-        
-        # Appends the buy to the orders list
-        orders.append(Order(product, 9998, maxBuy))
+        for bid, vol in obuy:
+            if ((bid > acc_ask) or ((self.position[product]>0) and (bid == acc_ask))) and cpos > -self.POSITION_LIMIT['AMETHYSTS']:
+                order_for = max(-vol, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
+                # order_for is a negative number denoting how much we will sell
+                cpos += order_for
+                assert(order_for <= 0)
+                orders.append(Order(product, bid, order_for))
 
-        # Appends the sell to the orders list
-        orders.append(Order(product, 10002, -maxSell))
+        if (cpos > -self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] > 0):
+            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
+            orders.append(Order(product, max(undercut_sell-1, acc_ask+1), num))
+            cpos += num
 
-        # Adds the order to the results dictionary
-        # self.result[product] = orders
+        if (cpos > -self.POSITION_LIMIT['AMETHYSTS']) and (self.position[product] < -15):
+            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
+            orders.append(Order(product, max(undercut_sell+1, acc_ask+1), num))
+            cpos += num
+
+        if cpos > -self.POSITION_LIMIT['AMETHYSTS']:
+            num = max(-40, -self.POSITION_LIMIT['AMETHYSTS']-cpos)
+            orders.append(Order(product, sell_pr, num))
+            cpos += num
 
         return orders
     
@@ -382,6 +404,7 @@ class Trader:
 
         return tot_vol, best_val
 
+"""
     highestBuySpread = 0
     lowestBuySpread = -1
   
@@ -473,3 +496,4 @@ class Trader:
 
         # Returns the order
         return orders[product]
+"""
