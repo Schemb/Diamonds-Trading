@@ -18,7 +18,7 @@ Notes and question
 class Trader: #each new object of trader is created for one round eg. one day, 10000 iterations, timestamp from 0 to 1M
 
     position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0, "ROSES":0, "CHOCOLATE":0, "GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0 }
-    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0 } #total_volume traded
+    
     POSITION_LIMIT = {'AMETHYSTS': 20, 'STARFRUIT': 20, "ORCHIDS":100, "STRAWBERRIES":350,"ROSES":60,"CHOCOLATE":250,"GIFT_BASKET":60, 'COCONUT': 300, 'COCONUT_COUPON': 600 }
 
     cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} #totals pnl of each product after each round
@@ -26,8 +26,12 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
     cpnl_tracking={'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
     #cpnl_tracking: at the end of every iteration, if cpnl,0; tracking=-1. In the next iteration, if cpnl of the last iteration is <0 and cpnl of this round is also <0, tracking =-2. In the next iteration, if cpnl>0; tracking=1.
 
+    #Check the accuray of our predictions
+    true_diff = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
+    diff_our_predicted_highestbuy= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
+    diff_our_predicted_lowestsell = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
 
-    average_abs_differece_regression = {'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0}
+    
 
     starfruit_cache = []
     starfruit_dim = 4
@@ -58,6 +62,28 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         #Update the current position of each product from the position in the TradingState object
         for key, val in state.position.items():
             self.position[key] = val
+        
+        #before changing the caches, compare our predicted_mid_price from last iteration and the true best bid, best ask of this iteration
+        for product in ['STARFRUIT',"ROSES","STRAWBERRIES","CHOCOLATE","GIFT_BASKET"]:
+            order_depth: OrderDepth = state.order_depths[product]
+            _, lowest_sell_thisround = self.values_extract(order_depth.sell_orders,buy=0)
+            _, highest_buy_thisround = self.values_extract(order_depth.buy_orders, buy=1)
+            self.true_diff[product]+= (lowest_sell_thisround - highest_buy_thisround)/1000
+            if product == "STARFRUIT":
+                self.diff_our_predicted_highestbuy[product]+= (self.calc_next_price_starfruit() - highest_buy_thisround)/1000 #1000 is the total number of iterations in this round
+                self.diff_our_predicted_lowestsell[product]+= (lowest_sell_thisround- self.calc_next_price_starfruit())/1000
+            elif product == "GIFT_BASKET":
+                self.diff_our_predicted_highestbuy[product]+= (self.calc_next_price_basket() - highest_buy_thisround)/1000 
+                self.diff_our_predicted_lowestsell[product]+= (lowest_sell_thisround- self.calc_next_price_basket())/1000
+            elif product == "CHOCOLATE":
+                self.diff_our_predicted_highestbuy[product]+= (self.calc_next_price_choco() - highest_buy_thisround)/1000 
+                self.diff_our_predicted_lowestsell[product]+= (lowest_sell_thisround- self.calc_next_price_choco())/1000
+            elif product == "ROSES":
+                self.diff_our_predicted_highestbuy[product]+= (self.calc_next_price_roses() - highest_buy_thisround)/1000 
+                self.diff_our_predicted_lowestsell[product]+= (lowest_sell_thisround- self.calc_next_price_roses())/1000
+            elif product == "STRAWBERRIES":
+                self.diff_our_predicted_highestbuy[product]+= (self.calc_next_price_straw() - highest_buy_thisround)/1000 
+                self.diff_our_predicted_lowestsell[product]+= (lowest_sell_thisround- self.calc_next_price_straw())/1000
 
         #Calculate lb and ub of STARFRUIT, and create STARFRUIT cache
         if len(self.starfruit_cache) == self.starfruit_dim:
@@ -101,8 +127,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         self.basket_cache.append(mid_price_choco)
         self.basket_cache.append(mid_price_basket)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        basket_lb = self.calc_next_price_basket()-1 #-6.42
-        basket_ub = self.calc_next_price_basket()+1 #+6.42
+        basket_lb = self.calc_next_price_basket() -1
+        basket_ub = self.calc_next_price_basket() +1
 
         #choco_cache
         self.choco_cache.append(mid_price_basket)
@@ -110,8 +136,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         self.choco_cache.append(mid_price_roses)
         self.choco_cache.append(mid_price_choco)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        choco_lb = self.calc_next_price_choco()-1 #-0.8
-        choco_ub = self.calc_next_price_choco()+1 #+0.8
+        choco_lb = self.calc_next_price_choco()-1
+        choco_ub = self.calc_next_price_choco()+1
 
         #roses_cache
         self.roses_cache.append(mid_price_choco)
@@ -119,8 +145,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         self.roses_cache.append(mid_price_straw)
         self.roses_cache.append(mid_price_roses)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        roses_lb = self.calc_next_price_roses()-1 #-2.17
-        roses_ub = self.calc_next_price_roses()+1 #+2.17
+        roses_lb = self.calc_next_price_roses()-1
+        roses_ub = self.calc_next_price_roses()+1
 
 
         #straw_cache
@@ -129,8 +155,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         self.straw_cache.append(mid_price_basket)
         self.straw_cache.append(mid_price_straw)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        straw_lb = self.calc_next_price_straw()-1 #-0.32
-        straw_ub = self.calc_next_price_straw()+1 #+0.32
+        straw_lb = self.calc_next_price_straw()-1
+        straw_ub = self.calc_next_price_straw()+1
         
 
         #calculate lb and ub of AMETHYSTS
@@ -155,13 +181,11 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
        
         for product in state.own_trades.keys():
             for trade in state.own_trades[product]: #state.own_trades[product] - a list of Trade objects for each product
-                if trade.timestamp != state.timestamp-100:
-                    continue 
-                self.volume_traded[product] += abs(trade.quantity) #actually no need because trade.quantity is always the absolute value in Trade objects
-                if trade.buyer == "SUBMISSION":
-                    self.cpnl[product] -= trade.quantity * trade.price #the amount we pay for each trade
-                else:
-                    self.cpnl[product] += trade.quantity * trade.price #the amount we receive for each trade
+                if trade.timestamp == state.timestamp-100:
+                    if trade.buyer == "SUBMISSION":
+                        self.cpnl[product] -= trade.quantity * trade.price #the amount we pay for each trade
+                    if trade.seller == "SUBMISSION":
+                        self.cpnl[product] += trade.quantity * trade.price #the amount we receive for each trade
         
         for product in self.cpnl.keys():
             if self.cpnl[product]<0 and self.last_cpnl[product]<=0:
@@ -177,23 +201,27 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
             self.last_cpnl[product]=self.cpnl[product]
 
         #End computation of cpnl of each product-------------------------------------------------------------------------------------
-        for product in ['AMETHYSTS', 'STARFRUIT',"ROSES","STRAWBERRIES","CHOCOLATE","GIFT_BASKET"]: 
+        for product in ["ROSES","STRAWBERRIES","CHOCOLATE","GIFT_BASKET"]: 
             print(f"The product is {product}")
+            print(f"cpnl[product] is {self.cpnl[product]}")
+            print(f"last_cpnl[product] is {self.last_cpnl[product]}")
+            print(f"cpnl_tracking is {self.cpnl_tracking[product]}")
             print(f"The orders we send is: {result[product]}")
-            print(f"Lowerbound used: ",acc_bid[product])
-            print(f"Upperbound used: ",acc_ask[product])
-        print(f"End timestamp {timestamp} \n ")
+            print(f"Predicted value of next round: {acc_bid[product]+1}")
+            print(f"Average true difference between highest buy and lowest sell: {self.true_diff[product]}")
+            print(f"Average predicted mid price - true highest buy: {self.diff_our_predicted_highestbuy[product]}")
+            print(f"Average true lowest sell - predicted mid price: {self.diff_our_predicted_lowestsell[product]}")
+            print(f"End timestamp {timestamp} \n ")
         
+        #chocolate is not profitable
+        for product in ['CHOCOLATE']:
+            result[product]=[]
+
+        #result['GIFT_BASKET'] +=self.DoGIFT_BASKETTrading(state) #Try to do Noah's gift_basket strategy but don't know why the return is low
 
         traderData = "SAMPLE"
 
         orchidConversions=0
-
-        #------Remove these products for testing----------
-        """
-        for product in ["ORCHIDS", "STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET",'COCONUT', 'COCONUT_COUPON']:
-            result[product]=[]
-        """
 
         return result, orchidConversions, traderData        
     
@@ -541,7 +569,7 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
 
         return tot_vol, best_val
 
-"""
+
     highestBuySpread = 0
     lowestBuySpread = -1
   
@@ -549,7 +577,7 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
     lowestSellSpread = -1
     
     def DoGIFT_BASKETTrading(self, state: TradingState):
-        print("= GIFT_BASKET =")
+
         lowestAskPrices: Dict[str, int] = {"GIFT_BASKET": -1, "STRAWBERRIES": -1, "CHOCOLATE": -1, "ROSES": -1}
         highestBidPrices: Dict[str, int] = {"GIFT_BASKET": 0, "STRAWBERRIES": 0, "CHOCOLATE": 0, "ROSES": 0}
         baskets = "GIFT_BASKET"
@@ -558,7 +586,7 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         roses = "ROSES"
 
         # A list of any orders made
-        orders: Dict[str, List[Order]] = {baskets: [], chocolate: [], strawberries: [], roses: []}
+        orders: Dict[str, List[Order]] = {baskets: []}
 
 
         # ------------------------ BUYING ------------------------
@@ -632,5 +660,4 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         # print("SPREADS:", buySpread, self.highestBuySpread, self.lowestBuySpread, sellSpread, self.highestSellSpread, self.lowestSellSpread)
 
         # Returns the order
-        return orders[product]
-"""
+        return orders[baskets]
