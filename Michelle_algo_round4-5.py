@@ -4,6 +4,8 @@ import math
 import numpy as np
 
 """
+TRIGGER WARNING: CPNL CALCULATION IS WRONG
+
 Notes and question
 
 1- Why doesn't my cpnl dictionary show the same pnl of each product as seen in the xlsx in the results log?
