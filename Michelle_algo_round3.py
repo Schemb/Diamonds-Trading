@@ -3,15 +3,31 @@ from datamodel import Listing, OrderDepth, Trade, TradingState, ConversionObserv
 import math 
 import numpy as np
 
+"""
+Notes and question
+
+1- Why doesn't my cpnl dictionary show the same pnl of each product as seen in the xlsx in the results log?
+2- Don't understand the compute quantity part of ComputeAmethyst, but it seems to do ok so...
+3- Why setting -1 and +1 to calculate acc_bid and acc_ask? why 1?
+3- Want to learn more algo trading but there are so few resources and step-by-step tutorials
+
+"""
+
 
 
 class Trader: #each new object of trader is created for one round eg. one day, 10000 iterations, timestamp from 0 to 1M
 
-    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0, "ROSES":0, "CHOCOLATE":0, "GIFT_BASKET":0 }
-    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0 } #total_volume traded
-    POSITION_LIMIT = {'AMETHYSTS': 20, 'STARFRUIT': 20, "ORCHIDS":100, "STRAWBERRIES":350,"ROSES":60,"CHOCOLATE":250,"GIFT_BASKET":60 }
+    position= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0, "ROSES":0, "CHOCOLATE":0, "GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0 }
+    volume_traded= {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS":0, "STRAWBERRIES":0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0 } #total_volume traded
+    POSITION_LIMIT = {'AMETHYSTS': 20, 'STARFRUIT': 20, "ORCHIDS":100, "STRAWBERRIES":350,"ROSES":60,"CHOCOLATE":250,"GIFT_BASKET":60, 'COCONUT': 300, 'COCONUT_COUPON': 600 }
 
-    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0} #totals pnl of each product after each round
+    cpnl = {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} #totals pnl of each product after each round
+    last_cpnl=  {'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
+    cpnl_tracking={'AMETHYSTS' : 0, 'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0, 'COCONUT': 0, 'COCONUT_COUPON': 0} 
+    #cpnl_tracking: at the end of every iteration, if cpnl,0; tracking=-1. In the next iteration, if cpnl of the last iteration is <0 and cpnl of this round is also <0, tracking =-2. In the next iteration, if cpnl>0; tracking=1.
+
+
+    average_abs_differece_regression = {'STARFRUIT' : 0, "ORCHIDS": 0, "STRAWBERRIES": 0,"ROSES":0,"CHOCOLATE":0,"GIFT_BASKET":0}
 
     starfruit_cache = []
     starfruit_dim = 4
@@ -35,7 +51,7 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         
         # Initialize the method output dict as an empty dict
-        result = {'AMETHYSTS' : [], 'STARFRUIT' : [], "ORCHIDS": [], "STRAWBERRIES": [],"ROSES":[],"CHOCOLATE":[],"GIFT_BASKET":[] }
+        result = {'AMETHYSTS' : [], 'STARFRUIT' : [], "ORCHIDS": [], "STRAWBERRIES": [],"ROSES":[],"CHOCOLATE":[],"GIFT_BASKET":[],'COCONUT': [], 'COCONUT_COUPON': [] }
 
         timestamp = state.timestamp
 
@@ -85,8 +101,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
         self.basket_cache.append(mid_price_choco)
         self.basket_cache.append(mid_price_basket)
         #from here onwards, those caches either have 4 element, 8 elements, or 12 elements. cannot be more than that
-        basket_lb = self.calc_next_price_basket()-6 #-6.42
-        basket_ub = self.calc_next_price_basket()+6 #+6.42
+        basket_lb = self.calc_next_price_basket()-1 #-6.42
+        basket_ub = self.calc_next_price_basket()+1 #+6.42
 
         #choco_cache
         self.choco_cache.append(mid_price_basket)
@@ -146,17 +162,38 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
                     self.cpnl[product] -= trade.quantity * trade.price #the amount we pay for each trade
                 else:
                     self.cpnl[product] += trade.quantity * trade.price #the amount we receive for each trade
+        
+        for product in self.cpnl.keys():
+            if self.cpnl[product]<0 and self.last_cpnl[product]<=0:
+                self.cpnl_tracking[product] -= 1
+            if self.cpnl[product]<0 and self.last_cpnl[product]>0:
+                self.cpnl_tracking[product] = -1
+            if self.cpnl[product]>0 and self.last_cpnl[product]>=0:
+                self.cpnl_tracking[product] += 1
+            if self.cpnl[product]>0 and self.last_cpnl[product]<0:
+                self.cpnl_tracking[product] =1
+
+        for product in self.cpnl.keys():
+            self.last_cpnl[product]=self.cpnl[product]
 
         #End computation of cpnl of each product-------------------------------------------------------------------------------------
-        
-        print(f"Timestamp {timestamp}, PnL of each product is: ")
-        for product in state.order_depths.keys():
-            print(f"Product {product} has PnL {self.cpnl[product]}")
+        for product in ['AMETHYSTS', 'STARFRUIT',"ROSES","STRAWBERRIES","CHOCOLATE","GIFT_BASKET"]: 
+            print(f"The product is {product}")
+            print(f"The orders we send is: {result[product]}")
+            print(f"Lowerbound used: ",acc_bid[product])
+            print(f"Upperbound used: ",acc_ask[product])
         print(f"End timestamp {timestamp} \n ")
+        
 
         traderData = "SAMPLE"
 
         orchidConversions=0
+
+        #------Remove these products for testing----------
+        """
+        for product in ["ORCHIDS", "STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET",'COCONUT', 'COCONUT_COUPON']:
+            result[product]=[]
+        """
 
         return result, orchidConversions, traderData        
     
@@ -164,7 +201,9 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
 
         if product == "AMETHYSTS":
             return self.compute_orders_AMETHYSTS(product, order_depth, acc_bid, acc_ask)
-        if product in ["STARFRUIT","STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET"]:
+        if product == "STARFRUIT":
+            return self.compute_orders_STARFRUIT(product, order_depth, acc_bid, acc_ask, self.POSITION_LIMIT[product])
+        if product in ["STRAWBERRIES","ROSES","CHOCOLATE","GIFT_BASKET"]:
             return self.compute_orders_regression(product, order_depth, acc_bid, acc_ask, self.POSITION_LIMIT[product])
 
     def compute_orders_AMETHYSTS(self, product, order_depth, acc_bid, acc_ask): #this is how to market make and market take around 10k considering the no. of positions
@@ -247,11 +286,9 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
 
         return orders
     
-    def compute_orders_regression(self, product, order_depth, acc_bid, acc_ask, LIMIT):
+    def compute_orders_STARFRUIT(self, product, order_depth, acc_bid, acc_ask, LIMIT):
+        #acc_bid: low bound; acc_ask: up bound
         orders: list[Order] = []
-
-        #osell = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
-        #obuy = collections.OrderedDict(sorted(order_depth.buy_orders.items(), reverse=True))
 
         sell_vol, best_sell_pr = self.values_extract(order_depth.sell_orders,buy=0)
         buy_vol, best_buy_pr = self.values_extract(order_depth.buy_orders, buy=1)
@@ -279,7 +316,8 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
             orders.append(Order(product, bid_pr, num))
             cpos += num
         
-        cpos = self.position[product]
+        cpos = self.position[product] #why restting cpos local variable to self.position[product] before generating sell order. Imagine: current position is 5. If all buy orders above are matched, it goes up to 15. If we start from position 15 to do our sell orders, we decide to sell 35 to reach position -20. But what if our buy orders are not matched at all and our current position is still 5?
+        #Between the two possible cases of current position after we do the buy orders, minimum=5 (the original before we do the buy orders, because every buy order increase the position); and the maximum position after we do the buy orders, choose the smaller one to be safe.
         
 
         for bid, vol in obuy:
@@ -294,6 +332,105 @@ class Trader: #each new object of trader is created for one round eg. one day, 1
             num = -LIMIT-cpos
             orders.append(Order(product, sell_pr, num))
             cpos += num
+
+        return orders
+
+    def compute_orders_regression(self, product, order_depth, acc_bid, acc_ask, LIMIT):
+        """
+
+        - chocolate: price prediction is accurate, but the buy_offer is too low while the sell_offer is too high, so usually don't have successful offers with the bot
+        - roses: prediction not accurate, closer to the current mid price than the next, keeping buying 120
+        - strawberries: price prediction is accurate
+        - gift basket: my price prediction is NOT ACCURATE. my regression models give the predictions of the next round that is closer to this round than to the next round. T.T So i'm going to change the logic of this function if there is a big difference between the predicted results of next round and the best bid, best ask of this round.
+
+        Now think of a compute_orders_regression strategy that is SAFE and does not bring loss
+        """
+        #acc_bid: predicted best buy of next round, low bound; 
+        orders: list[Order] = []
+
+        sell_vol, best_sell_pr = self.values_extract(order_depth.sell_orders,buy=0)
+        buy_vol, best_buy_pr = self.values_extract(order_depth.buy_orders, buy=1)
+
+        osell =sorted(order_depth.sell_orders.items(), reverse=True) #selling price to us in descending order
+        obuy = sorted(order_depth.buy_orders.items(), reverse=False) #buy_price from us in increasing order
+
+        #---Generate buy orders-------
+        cpos = self.position[product]
+
+        #if PnL for this product has been negative for more than 2 rounds, don't buy more
+        if self.cpnl_tracking[product] >= -2:
+            for ask, vol in osell:
+                if (ask <= acc_bid) and cpos < LIMIT:
+                    order_for = min(-vol, LIMIT - cpos)
+                    cpos += order_for
+                    assert(order_for >= 0)
+                    orders.append(Order(product, ask, order_for))
+            
+            if (best_sell_pr> acc_bid) and (cpos < LIMIT):
+                num = LIMIT - cpos
+                orders.append(Order(product, acc_bid, num))
+                cpos += num
+
+        #Then, add buy orders with the price that is out of scope of the price that the bots offered to sell for the bots to reconsider
+        #in the case that all the sell offers > predicted buy next round eg. acc_bid, we offer to buy at acc_bid next round (acc_bid now is <best_ask_offer this round)
+        #but this is BUY - we are buying and PnL decreases, and I don't want to depend so much on acc_bid what if acc_bid is wrong.
+
+            
+        """
+        undercut_buy = best_buy_pr + 1
+        undercut_sell = best_sell_pr - 1
+
+        bid_pr = min(undercut_buy, acc_bid) # we will shift this by 1 to beat this price
+        sell_pr = max(undercut_sell, acc_ask)
+
+        if cpos < LIMIT:
+            num = LIMIT - cpos
+            orders.append(Order(product, bid_pr, num))
+            cpos += num
+        """
+        #--------Generating sell orders
+
+        cpos = self.position[product] #why restting cpos local variable to self.position[product] before generating sell order. Imagine: current position is 5. If all buy orders above are matched, it goes up to 15. If we start from position 15 to do our sell orders, we decide to sell 35 to reach position -20. But what if our buy orders are not matched at all and our current position is still 5?
+        #Between the two possible cases of current position after we do the buy orders, minimum=5 (the original before we do the buy orders, because every buy order increase the position); and the maximum position after we do the buy orders, choose the smaller one to be safe.
+        
+        #If self.cpnl[product]>0, okay, we can sell however, because when we sell profit goes up
+        #But if self.cpnl[product]<0, we have to sell AT LEAST EVERAGE PRICE of the stock we have
+
+        #acc_ask: predicted best sell of next round, up bound
+        #bid >= acc_ask; we can sell now at a price higher than they can sell in the later round
+        #best case: bid > acc_ask> acc_bid. we sell out this round must be greater than we buy in of next round, so bid >= predicted_lowest_ask_next_round
+        #the worst case: bid we sell now < predicted_highest_bid_next_round since we can just sell next round
+        #medium good: acc_bid< bid now< acc_ask
+
+        if (self.cpnl[product]<0) and (self.position[product]<0):
+            average_price=self.cpnl[product]/self.position[product]
+            assert(average_price >= 0)
+
+            for bid, vol in obuy:
+                if ((bid >= acc_ask) or ((self.position[product]>0) and (bid>= acc_bid))) and (cpos > -LIMIT) and (bid >=average_price):
+                    order_for = max(-vol, -LIMIT-cpos)
+                    cpos += order_for
+                    assert(order_for <= 0)
+                    orders.append(Order(product, bid, order_for))
+        
+            if (best_buy_pr< acc_ask)and(cpos > -LIMIT) and (bid >=average_price):
+                num = -LIMIT - cpos
+                orders.append(Order(product, acc_ask, num))
+                cpos += num
+        
+        else:
+
+            for bid, vol in obuy:
+                if ((bid >= acc_ask) or ((self.position[product]>0) and (bid>= acc_bid))) and cpos > -LIMIT:
+                    order_for = max(-vol, -LIMIT-cpos)
+                    cpos += order_for
+                    assert(order_for <= 0)
+                    orders.append(Order(product, bid, order_for))
+            
+            if (best_buy_pr< acc_ask)and(cpos > -LIMIT):
+                    num = -LIMIT - cpos
+                    orders.append(Order(product, acc_ask, num))
+                    cpos += num
 
         return orders
 
