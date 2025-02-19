@@ -57,9 +57,16 @@ class Order:
 
 class OrderDepth:
 
+    """
     def __init__(self):
         self.buy_orders: Dict[int, int] = {}
         self.sell_orders: Dict[int, int] = {}
+    """
+    #Mich: I reformated the _init_ function because don't know why my code doesn't work with the original definition
+    
+    def __init__(self,buy_orders: Dict[int, int] = {} , sell_orders: Dict[int, int] = {}):
+        self.buy_orders=buy_orders
+        self.sell_orders=sell_orders
 
 
 class Trade:
