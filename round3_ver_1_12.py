@@ -374,14 +374,14 @@ class Trader:
     if buySpread < self.lowestBuySpread or self.lowestBuySpread == -1:
       self.lowestBuySpread = buySpread
 
-    if buySpread >= 400: # buy components
-        # Prints how many were were worth buying, and at what value
-        print("\tBUY COMPONENTS:", chocolate, lowestAskPrices[chocolate], strawberries, lowestAskPrices[strawberries], roses, lowestAskPrices[roses])
+    # if buySpread >= 400: # buy components
+    #     # Prints how many were were worth buying, and at what value
+    #     print("\tBUY COMPONENTS:", chocolate, lowestAskPrices[chocolate], strawberries, lowestAskPrices[strawberries], roses, lowestAskPrices[roses])
 
-        # Appends the buy to the orders list
-        orders[chocolate].append(Order(chocolate, lowestAskPrices[chocolate], 4))
-        orders[strawberries].append(Order(strawberries, lowestAskPrices[strawberries], 6))
-        orders[roses].append(Order(roses, lowestAskPrices[roses], 1))
+    #     # Appends the buy to the orders list
+    #     orders[chocolate].append(Order(chocolate, lowestAskPrices[chocolate], 4))
+    #     orders[strawberries].append(Order(strawberries, lowestAskPrices[strawberries], 6))
+    #     orders[roses].append(Order(roses, lowestAskPrices[roses], 1))
 
     if buySpread < 400: # buy basket
         # Prints how many were were worth buying, and at what value
@@ -413,14 +413,14 @@ class Trader:
     if sellSpread < self.lowestSellSpread or self.lowestSellSpread == -1:
       self.lowestSellSpread = sellSpread
 
-    if sellSpread <= 400: # buy components
-        # Prints how many were were worth buying, and at what value
-        print("\tSELL COMPONENTS:", chocolate, highestBidPrices[chocolate], strawberries, highestBidPrices[strawberries], roses, highestBidPrices[roses])
+    # if sellSpread <= 400: # buy components
+    #     # Prints how many were were worth buying, and at what value
+    #     print("\tSELL COMPONENTS:", chocolate, highestBidPrices[chocolate], strawberries, highestBidPrices[strawberries], roses, highestBidPrices[roses])
 
-        # Appends the buy to the orders list
-        orders[chocolate].append(Order(chocolate, highestBidPrices[chocolate], -4))
-        orders[strawberries].append(Order(strawberries, highestBidPrices[strawberries], -6))
-        orders[roses].append(Order(roses, highestBidPrices[roses], -1))
+    #     # Appends the buy to the orders list
+    #     orders[chocolate].append(Order(chocolate, highestBidPrices[chocolate], -4))
+    #     orders[strawberries].append(Order(strawberries, highestBidPrices[strawberries], -6))
+    #     orders[roses].append(Order(roses, highestBidPrices[roses], -1))
 
     if sellSpread > 400: # buy basket
         # Prints how many were were worth buying, and at what value
@@ -432,8 +432,7 @@ class Trader:
     # print("SPREADS:", buySpread, self.highestBuySpread, self.lowestBuySpread, sellSpread, self.highestSellSpread, self.lowestSellSpread)
 
     # Adds the order to the results dictionary
-    for product in orders:
-      self.result[product] = orders[product]
+    self.result[baskets] = orders[baskets]
 
 
   # This function checks all the market trades from the previous iteration, 
